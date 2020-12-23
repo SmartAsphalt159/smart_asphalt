@@ -32,9 +32,19 @@ def main():
     send_thread.start()
     list_thread.start()
 
-    
+    ### NETWORK INIT COMPLETE ### 
 
-    while(1): #run for infinity 
+    ### INIT CONTROLS ### @TODO Cayman
+    ### INIT CONTROLS COMPLETE ###
+
+    ### INIT LIDAR ### @TODO Cayman
+    ### INIT LIDAR COMPLETE ###
+
+    ### INIT LOCAL COMMUNICATION ### @TODO Anyone
+    ### INIT LOCAL COMMUNICATION COMPLETE ###
+
+    #while 1 used for the event driven system
+    while(1):
         print("hi")
 
 
