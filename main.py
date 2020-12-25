@@ -10,6 +10,7 @@ import sys
 import time
 import threading
 import car_comms
+from logger import Logger
 
 def main():
     
@@ -34,7 +35,16 @@ def main():
 
     ### NETWORK INIT COMPLETE ### 
 
-    ### INIT CONTROLS ### @TODO Cayman
+    ### DATA LOGGING INIT ### 
+
+    net = Logger("network")
+    lidar = Logger("lidar")
+    net_data = None
+    lidar_data = None
+    
+    ### DATA LOGGING INIT COMPLETE ###
+
+    ### INIT CONTROLS ### @TODO Cayman / Adrian 
     ### INIT CONTROLS COMPLETE ###
 
     ### INIT LIDAR ### @TODO Cayman
@@ -45,7 +55,11 @@ def main():
 
     #while 1 used for the event driven system
     while(1):
-        print("hi")
+        #synchronize threads (oh boi)
+
+        #update dataframes with data
+        net.update_df(net_data)
+        lidar.update_df(lidar_data)
 
 
 if __name__ == "__main__":
