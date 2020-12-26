@@ -11,7 +11,7 @@ import numpy as np
 
 class Logger:
 
-    """ Constructor """
+    """ Logger Constructor """
     def __init__(self, sensor):
         self.sensor = sensor
 

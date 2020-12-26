@@ -2,7 +2,7 @@
 
 """
 Main file for smart aspahlt's platooning code
-Last revision: December 22nd, 2020
+Last revision: December 26th, 2020
 """
 
 import socket
@@ -23,7 +23,7 @@ def main():
         sys.exit()
 
     #init sockets
-    recskt, sndskt = car_comms.net_inet(sys.argv[1], sys.argv[2])
+    recskt, sndskt = car_comms.net_init(sys.argv[1], sys.argv[2])
 
     #create threads for broadcasting and listening 
     list_thread = threading.Thread(target=car_comms.listen_data, args=([recskt]))
@@ -44,14 +44,11 @@ def main():
     
     ### DATA LOGGING INIT COMPLETE ###
 
-    ### INIT CONTROLS ### @TODO Cayman / Adrian 
+    ### INIT CONTROLS ### TODO Cayman / Adrian 
     ### INIT CONTROLS COMPLETE ###
 
-    ### INIT LIDAR ### @TODO Cayman
-    ### INIT LIDAR COMPLETE ###
-
-    ### INIT LOCAL COMMUNICATION ### @TODO Anyone
-    ### INIT LOCAL COMMUNICATION COMPLETE ###
+    ### INIT SENSORS ### TODO Cayman / Andrew 
+    ### INIT SENSORS COMPLETE ###
 
     #while 1 used for the event driven system
     while(1):

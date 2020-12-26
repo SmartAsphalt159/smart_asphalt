@@ -10,8 +10,7 @@ import sys
 import timing
 from Packet import Packet
 
-
-def net_inet(p1, p2):
+def net_init(p1, p2):
 
     ls = int(p1)                                                  #for mapping sending port
     sn = int(p2)                                                  #for mapping listening port
