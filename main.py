@@ -9,12 +9,13 @@ import socket
 import sys
 import time
 import threading
-import car_comms
+import network
 from logger import Logger
+from synch import inter_thread_queue
 
 def main():
     
-    ### INIT NETWORKING ###
+    ### INIT NETWORK ###
 
     #get port numbers 
     if(len(sys.argv) != 3):                                        #checking argument validity 
@@ -23,17 +24,28 @@ def main():
         sys.exit()
 
     #init sockets
-    recskt, sndskt = car_comms.net_init(sys.argv[1], sys.argv[2])
+    recskt, sndskt = network.net_init(sys.argv[1], sys.argv[2])
 
     #create threads for broadcasting and listening 
-    list_thread = threading.Thread(target=car_comms.listen_data, args=([recskt]))
-    send_thread = threading.Thread(target=car_comms.broadcast_data, args=([sndskt]))
+    list_thread = threading.Thread(target=network.listen_data, args=([recskt]))
+    send_thread = threading.Thread(target=network.broadcast_data, args=([sndskt]))
 
     #start threads
     send_thread.start()
     list_thread.start()
 
     ### NETWORK INIT COMPLETE ### 
+
+    ### THREAD COMMUNICATIONS INIT  ### 
+    """initailize thread communication queue with infinite queue length and binary semaphore """
+    #TODO: Decide whether lidar needs a separate queue due to bandwidth + speed 
+    #network and controls queue
+    net_cont_synch = inter_thread_queue(0, 1) 
+
+    #local sensors and control queue
+    sensor_cont_synch = inter_thread_queue(0, 1) 
+
+    ### THREAD COMMUNUCATIONS INIT COMPLETE ### 
 
     ### DATA LOGGING INIT ### 
 
@@ -50,9 +62,9 @@ def main():
     ### INIT SENSORS ### TODO Cayman / Andrew 
     ### INIT SENSORS COMPLETE ###
 
-    #while 1 used for the event driven system
+    ### RUNTIME COMPONENT ###
     while(1):
-        #synchronize threads (oh boi)
+
 
         #update dataframes with data
         net.update_df(net_data)

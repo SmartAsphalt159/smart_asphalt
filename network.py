@@ -9,6 +9,7 @@ import socket
 import sys
 import timing
 from Packet import Packet
+from synch import inter_thread_queue
 
 def net_init(p1, p2):
 
