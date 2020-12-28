@@ -12,6 +12,8 @@ sys.path.append('/home/andrew/school/159/code/smart_asphalt/src/')
 from logger import Logger
 import timing
 
+#Testing Network Logger
+
 #Create a logger
 log = Logger("network")
 
@@ -30,3 +32,19 @@ log.print_df()
 #a priori, iteration.txt must already exist
     #and be populated solely as an int as the first character
 log.log_data()
+
+#Testing Lidar Logger
+
+#Create a logger
+lidar_log = Logger("lidar")
+
+#print empty dataframe
+lidar_log.print_df()
+
+#formatting data
+lidar_form = lidar_log.format_data([timing.get_current_time(), 120.0, 3.0])
+print(lidar_form)
+
+#Upating dataframe
+lidar_log.update_df([timing.get_current_time(), 120.0, 3.0])
+lidar_log.print_df()

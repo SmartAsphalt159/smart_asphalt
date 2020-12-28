@@ -30,13 +30,20 @@ class Logger:
     def log_data(self):
 
         #get iteration
-        it = open("iteration.txt")
-        line = it.readline()
+        it_r = open("iteration.txt", "r")
+        line = it_r.readline()
         iteration = line.strip()
+        it_r.close()
 
         #open new logfile 
         sname = self.sensor+iteration+".csv"
         self.df.to_csv(sname, index = False)
+
+        #write new iteration
+        it_w = open("iteration.txt", "w")
+        it_w.write(str(int(iteration)+1))
+        it_w.close()
+
 
     """ Format data into append ready data frame row """
     def format_data(self, rawdata):
