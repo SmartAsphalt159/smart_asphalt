@@ -45,20 +45,20 @@ class thread_queue:
     
 class network_producer(thread_queue, recv_network):
 
-	"""Constructor"""
-	def __init__(self, out_que, port):
-		#TODO How to use the objects that I am creating in the producer
-		thread_queue.__init__(self, out_que)
-		recv_network.__init__(self, port)
-		self.out_que = out_que
-		self.running = True
+    """Constructor"""
+    def __init__(self, out_que, port):
+        #TODO How to use the objects that I am creating in the producer
+        thread_queue.__init__(self, out_que)
+        recv_network.__init__(self, port)
+        self.out_que = out_que
+        self.running = True
 
-	def halt_thread(self):
-		self.running = False
+    def halt_thread(self):
+        self.running = False
 
-	def run(self):
-		while(self.running):
-			try:
-				thread_queue.enqueue(recv_network.listen_data())
-			except:
-				continue
+    def run(self):
+        while(self.running):
+            try:
+                self.enqueue(self.listen_data())
+            except:
+                continue
