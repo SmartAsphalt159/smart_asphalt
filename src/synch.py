@@ -4,9 +4,9 @@ Last revision: January 8th, 2020
 """
 
 import threading
-import network
 from queue import Queue
 from threading import Lock
+from network import recv_network, send_network
 
 class thread_queue:
 
@@ -43,18 +43,22 @@ class thread_queue:
     def check_full(self):
         return self.que.full()
     
-class network_producer(thread_queue):
+class network_producer(thread_queue, recv_network):
 
 	"""Constructor"""
-	def __init__(self, out_que):
+	def __init__(self, out_que, port):
+		#TODO How to use the objects that I am creating in the producer
 		thread_queue.__init__(self, out_que)
+		recv_network.__init__(self, port)
 		self.out_que = out_que
 		self.running = True
 
 	def halt_thread(self):
-		running = False
+		self.running = False
 
 	def run(self):
-		while(running):
+		while(self.running):
 			try:
-				thread_queue.enqueue(Packet)
+				thread_queue.enqueue(recv_network.listen_data())
+			except:
+				continue
