@@ -1,31 +1,34 @@
 """
 Synchronization file for smart aspahlt's platooning code
-Last revision: December 26th, 2020
+Last revision: January 8th, 2020
 """
 
 import threading
+import network
 from queue import Queue
+from threading import Lock
 
-class inter_thread_queue:
+class thread_queue:
 
     """ Constructor """
-    def __init__(self, queue_size, semaphore_count):
+    def __init__(self, queue):
         #initialize infinite queue
-        self.que = Queue(maxsize=queue_size) 
-        self.sema = threading.Semaphore(semaphore_count)
-     
+        self.que = Queue(maxsize=0) 
+        self.lock = threading.Lock()
+
     """ Protected Enqueue """
+	# @TODO better define what data is, should it be a list, an optional argument, etc 
     def enqueue(self, data):
-        with self.sema:
+        with self.lock:
             try:
                 self.que.put(data)
             except: 
                 return -1
         return 0
 
-    """ Protected Deque """
+    """ Protected Dequeue """
     def dequeue(self):
-        with self.sema:
+        with self.lock:
             try: 
                 data = self.que.get()
             except:
@@ -40,3 +43,18 @@ class inter_thread_queue:
     def check_full(self):
         return self.que.full()
     
+class network_producer(thread_queue):
+
+	"""Constructor"""
+	def __init__(self, out_que):
+		thread_queue.__init__(self, out_que)
+		self.out_que = out_que
+		self.running = True
+
+	def halt_thread(self):
+		running = False
+
+	def run(self):
+		while(running):
+			try:
+				thread_queue.enqueue(Packet)
