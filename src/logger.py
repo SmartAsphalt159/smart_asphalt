@@ -2,7 +2,7 @@
 
 """
 Logging file for smart asphalt's platooning code
-Last revision: December 24th, 2020
+Last revision: January 9th, 2021 
 """
 
 import pandas as pd
@@ -12,13 +12,13 @@ import logging
 class Sys_logger():
 
     """ sys logging constructor """
-    def __init__(self, file):
-        self.file = file
-
+    def __init__(self, name):
         #setting up logger
-        self.logger = logging.getLogger('smart_asphalt')
+        self.logger = logging.getLogger(name)
+        #set logger so that it will display all message types 
+        self.logger.root.setLevel(logging.NOTSET)
         #file handler for debug messages
-        fh = logging.FileHandler(file)
+        fh = logging.FileHandler("smart_asphalt.log")
         fh.setLevel(logging.DEBUG)
         #create formatter
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -26,8 +26,17 @@ class Sys_logger():
         self.logger.addHandler(fh)
         self.logger.info("Initializing smart asphalt log")
 
-    def log_error(self, error_msg):
-        self.logger.error(error_msg)
+    def log_error(self, msg):
+        self.logger.error(msg)
+      
+    def log_warning(self, msg):
+        self.logger.warning(msg)
+
+    def log_info(self, msg):
+        self.logger.info(msg)
+
+    def log_debug(self, msg):
+        self.logger.debug(msg)
 
 class Data_logger:
 

@@ -47,9 +47,9 @@ class send_network():
             self.send_port = bind_port(port, 0)
             self.sndskt = bind_skt(self.send_port, 0)
 
-    def broadcast_data(self, braking, steering, speed):
+    def broadcast_data(self, braking, steering, speed, timestamp):
             self.sndskt.send((Packet(braking, steering, speed, 
-                    timing.get_current_time()).build_str()).encode())                
+                    timestamp).build_str()).encode())                
 
 class recv_network():
 
