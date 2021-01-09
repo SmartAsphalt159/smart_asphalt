@@ -7,11 +7,31 @@ Last revision: December 24th, 2020
 
 import pandas as pd
 import numpy as np 
+import logging
 
+class Sys_logger():
 
-class Logger:
+    """ sys logging constructor """
+    def __init__(self, file):
+        self.file = file
 
-    """ Logger Constructor """
+        #setting up logger
+        self.logger = logging.getLogger('smart_asphalt')
+        #file handler for debug messages
+        fh = logging.FileHandler(file)
+        fh.setLevel(logging.DEBUG)
+        #create formatter
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+        fh.setFormatter(formatter)
+        self.logger.addHandler(fh)
+        self.logger.info("Initializing smart asphalt log")
+
+    def log_error(self, error_msg):
+        self.logger.error(error_msg)
+
+class Data_logger:
+
+    """ data logger Constructor """
     def __init__(self, sensor):
         self.sensor = sensor
 

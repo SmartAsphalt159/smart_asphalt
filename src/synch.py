@@ -3,6 +3,7 @@ Synchronization file for smart aspahlt's platooning code
 Last revision: January 8th, 2020
 """
 
+import logger
 import threading
 from queue import Queue
 from threading import Lock
@@ -43,11 +44,40 @@ class thread_queue:
     def check_full(self):
         return self.que.full()
     
-class network_producer(thread_queue, recv_network):
+class network_producer(thread_queue, send_network):
+
+    """Constructor"""
+    def __init__(self, in_que, port):
+        #TODO How to use the objects that I am creating in the producer
+        thread_queue.__init__(self, in_que)
+        send_network.__init__(self, port)
+        self.out_que = in_que
+        self.running = True
+
+    def halt_thread(self):
+        self.running = False
+
+    def run(self):
+        while(self.running):
+            try:
+                #@TODO Interface with the local data communication queue here
+                braking = 0
+                steering = 0
+                speed = 0
+            except:
+                #TODO: add error messages later
+
+                continue
+
+            try:
+                self.enqueue(self.broadcast_data(braking, steering, speed))
+            except:
+                continue
+
+class network_consumer(thread_queue, recv_network):
 
     """Constructor"""
     def __init__(self, out_que, port):
-        #TODO How to use the objects that I am creating in the producer
         thread_queue.__init__(self, out_que)
         recv_network.__init__(self, port)
         self.out_que = out_que
@@ -56,6 +86,7 @@ class network_producer(thread_queue, recv_network):
     def halt_thread(self):
         self.running = False
 
+    #enqueue received packets in the queue
     def run(self):
         while(self.running):
             try:
