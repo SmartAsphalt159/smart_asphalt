@@ -9,7 +9,6 @@ import socket
 import sys
 import timing
 from Packet import Packet
-from synch import thread_queue
 
 def bind_port(str_port, port_type):
     int_port = int(str_port)                                      #for mapping listening port

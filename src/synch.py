@@ -11,14 +11,15 @@ from network import recv_network, send_network
 from logger import Sys_logger, Data_logger
 from Packet import Packet
 
-class thread_queue:
+class queue_skeleton:
 
     """ Constructor """
-    def __init__(self, queue, logger):
+    def __init__(self, que, lock, logger, timeout):
         #initialize infinite queue
-        self.que = Queue(maxsize=0) 
-        self.lock = threading.Lock()
+        self.que = que
+        self.lock = lock
         self.logger = logger
+        self.timeout = timeout
 
     """ Protected Enqueue """
     def enqueue(self, data):
@@ -31,10 +32,10 @@ class thread_queue:
         return 0
 
     """ Protected Dequeue """
-    def dequeue(self):
+    def dequeue(self,):
         with self.lock:
             try: 
-                data = self.que.get()
+                data = self.que.get(timeout=self.timeout)
             except:
                 return -1
         return data
@@ -47,11 +48,11 @@ class thread_queue:
     def check_full(self):
         return self.que.full()
     
-class network_producer(thread_queue, recv_network):
+class network_producer(queue_skeleton, recv_network):
 
     """Constructor"""
-    def __init__(self, in_que, port):
-        thread_queue.__init__(self, in_que, self.logger)
+    def __init__(self, in_que, lock, port, logger, timeout):
+        queue_skeleton.__init__(self, in_que, lock, logger, timeout)
         recv_network.__init__(self, port)
         self.running = True
 
@@ -66,14 +67,14 @@ class network_producer(thread_queue, recv_network):
             except:
                 self.logger.log_error(self, "Failed to enqueue packet data")
 
-class network_consumer(thread_queue, send_network):
+class network_consumer(queue_skeleton, send_network):
 
     """Constructor"""
-    def __init__(self, out_que, port):
-        #TODO How to use the objects that I am creating in the producer
-        thread_queue.__init__(self, out_que, self.logger)
+    def __init__(self, out_que, lock, port, logger, timeout):
+        queue_skeleton.__init__(self, out_que, lock, logger, timeout)
         send_network.__init__(self, port)
         self.running = True
+        self.timeout = timeout
 
     def halt_thread(self):
         self.running = False
