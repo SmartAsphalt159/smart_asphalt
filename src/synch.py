@@ -5,6 +5,7 @@ Last revision: January 8th, 2020
 
 import threading
 import timing
+import network as net
 from queue import Queue
 from threading import Lock
 from network import recv_network, send_network
@@ -27,7 +28,7 @@ class queue_skeleton:
             try:
                 self.que.put(data)
             except: 
-                self.logger.log_error(self, "Failed to enqueue data")
+                self.logger.log_error("Failed to enqueue data")
                 return -1
         return 0
 
@@ -37,6 +38,7 @@ class queue_skeleton:
             try: 
                 data = self.que.get(timeout=self.timeout)
             except:
+                self.logger.log_error("Failed to dequeue data")
                 return -1
         return data
 
@@ -64,8 +66,12 @@ class network_producer(queue_skeleton, recv_network):
         while(self.running):
             try:
                 self.enqueue(self.listen_data())
+                #TESTING ON PC
+                #self.enqueue(Packet(0, 0, 0, 0))
+                #print(self.que.qsize())
+                #timing.sleep_for(3)
             except:
-                self.logger.log_error(self, "Failed to enqueue packet data")
+                continue
 
 class network_consumer(queue_skeleton, send_network):
 
@@ -83,6 +89,9 @@ class network_consumer(queue_skeleton, send_network):
         while(self.running):
             try:
                 p = self.dequeue()
+                #testing on pc
+                #print(net.printPkt(p, 3))
+                self.que.task_done()
                 #TODO: Figure out how the pipeline changes from here
             except:
-                self.logger.log_error(self, "Failed to enqueue data")
+                continue

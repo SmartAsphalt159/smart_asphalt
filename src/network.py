@@ -36,8 +36,8 @@ def bind_skt(port, skt_type):
 
     return skt
 
-def printPkt(self, pkt, address):
-    print(f"{address}, {pkt.braking}, {pkt.steering}, {pkt.speed}\n")
+def printPkt(pkt, address):
+    print(f"{address}, {pkt.braking}, {pkt.steering}, {pkt.speed}, {pkt.timestamp}\n")
 
 class send_network():
 

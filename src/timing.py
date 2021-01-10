@@ -11,6 +11,10 @@ import time
 def get_current_time():
     return time.time()
 
+""" sleep for a certain amount of time """
+def sleep_for(secs):
+    time.sleep(secs)
+
 """ converts timestamp to local time """
 def conv_timestamp(ts):
     return time.gmtime(ts)
