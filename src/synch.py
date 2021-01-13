@@ -12,12 +12,14 @@ from network import recv_network, send_network
 from logger import Sys_logger, Data_logger
 from Packet import Packet
 
-class queue_skeleton:
+class queue_skeleton(threading.Thread):
 
     """ Constructor """
-    def __init__(self, que, lock, logger, timeout):
+    def __init__(self, inque, outque, lock, logger, timeout):
+        threading.Thread.__init__(self)
         #initialize infinite queue
-        self.que = que
+        self.inque = inque
+        self.outque = outque
         self.lock = lock
         self.logger = logger
         self.timeout = timeout
@@ -26,7 +28,7 @@ class queue_skeleton:
     def enqueue(self, data):
         with self.lock:
             try:
-                self.que.put(data)
+                self.outque.put(data)
             except: 
                 self.logger.log_error("Failed to enqueue data")
                 return -1
@@ -36,7 +38,8 @@ class queue_skeleton:
     def dequeue(self,):
         with self.lock:
             try: 
-                data = self.que.get(timeout=self.timeout)
+                data = self.inque.get(timeout=self.timeout)
+                self.inque.task_done()
             except:
                 self.logger.log_error("Failed to dequeue data")
                 return -1
@@ -44,17 +47,17 @@ class queue_skeleton:
 
     """ Empty wrapper """
     def check_empty(self):
-        return self.que.empty()
+        return self.inque.empty()
 
     """ Full wrapper """
     def check_full(self):
-        return self.que.full()
+        return self.outque.full()
     
 class network_producer(queue_skeleton, recv_network):
 
     """Constructor"""
     def __init__(self, in_que, lock, port, logger, timeout):
-        queue_skeleton.__init__(self, in_que, lock, logger, timeout)
+        queue_skeleton.__init__(self, in_que, None, lock, logger, timeout)
         recv_network.__init__(self, port)
         self.running = True
 
@@ -76,8 +79,8 @@ class network_producer(queue_skeleton, recv_network):
 class network_consumer(queue_skeleton, send_network):
 
     """Constructor"""
-    def __init__(self, out_que, lock, port, logger, timeout):
-        queue_skeleton.__init__(self, out_que, lock, logger, timeout)
+    def __init__(self, in_que, out_que, lock, port, logger, timeout):
+        queue_skeleton.__init__(self, in_que, out_que, lock, logger, timeout)
         send_network.__init__(self, port)
         self.running = True
         self.timeout = timeout
@@ -91,7 +94,6 @@ class network_consumer(queue_skeleton, send_network):
                 p = self.dequeue()
                 #testing on pc
                 #print(net.printPkt(p, 3))
-                self.que.task_done()
-                #TODO: Figure out how the pipeline changes from here
+                self.enqueue(p)
             except:
                 continue
