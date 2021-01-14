@@ -5,7 +5,7 @@ Last revision: January 13th, 2021
 
 #hack for including another directory
 import sys
-sys.path.append('/home/pi/smart_asphalt/src/')
+sys.path.append('/home/andrew/school/159/code/smart_asphalt/src')
 
 import threading
 from Packet import Packet
@@ -58,4 +58,17 @@ def driver():
 	while(1):
 		continue
 
-driver()
+
+def misc():
+	logger = Sys_logger("synch_test")
+	temp_lock = threading.Lock()
+	inpt_q = Queue(0)
+	oupt_q = Queue(0)
+
+	pd = network_producer(inpt_q, temp_lock, 2, logger, 3) 
+	cs = network_consumer(inpt_q, oupt_q, temp_lock, 2, logger, 3) 
+
+	print(pd)
+	print(cs)
+
+misc()

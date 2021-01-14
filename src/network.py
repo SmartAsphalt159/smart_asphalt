@@ -5,6 +5,7 @@ Networking implementation for smart asphalt's platoon
 Last revision: Friday, Jan 8th 
 """
 
+import os
 import socket
 import sys
 import timing
@@ -28,11 +29,12 @@ def bind_skt(port, skt_type):
 
     ######## BEGIN SOCKET INITIALIZATION ########
     skt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)     #using ipv4 address + UDP packets
+    ip = str(os.system('hostname -I | awk \'{print $1}\''))
     if(skt_type == 0):
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  #configuring for broadcasting 
-            skt.connect(("100.100.5.255", port))                  #connecting on the braodcast port
+            skt.connect((ip, port))                  #connecting on the braodcast port
     else:
-            skt.bind(("100.100.5.255", port))                     #bind socket to broadcast for listening
+            skt.bind((ip, port))                     #bind socket to broadcast for listening
 
     return skt
 
