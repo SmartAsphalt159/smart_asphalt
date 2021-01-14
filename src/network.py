@@ -59,9 +59,13 @@ class recv_network():
             self.recvpkt = Packet(0, 0, 0, 0)
 
     """ listens for data """
-    def listen_data(self):
-            data = self.recvskt.recvfrom(40)                               #TODO decide on appropriate length for receiving 
-            recv_time = timing.get_current_time()
+    def listen_data(self, timeout):
+            self.recvskt.settimeout(timeout)
+            try:
+                data, _ = self.recvskt.recvfrom(40)                               #TODO decide on appropriate length for receiving 
+                recv_time = timing.get_current_time()
+            except:
+                return -1
 
             self.recvpkt.decode_pkt(data)
             elapsed_time = timing.meas_diff(self.recvpkt.timestamp, recv_time)

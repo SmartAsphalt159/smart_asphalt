@@ -26,23 +26,30 @@ class queue_skeleton(threading.Thread):
 
     """ Protected Enqueue """
     def enqueue(self, data):
+        self.lock.aquire()
         with self.lock:
             try:
                 self.outque.put(data)
             except: 
                 self.logger.log_error("Failed to enqueue data")
+                self.lock.release()
                 return -1
+        self.lock.release()
         return 0
 
     """ Protected Dequeue """
     def dequeue(self,):
+        self.lock.aquire()
         with self.lock:
             try: 
                 data = self.inque.get(timeout=self.timeout)
                 self.inque.task_done()
             except:
                 self.logger.log_error("Failed to dequeue data")
+                self.lock.release()
                 return -1
+
+        self.lock.release()
         return data
 
     """ Empty wrapper """
@@ -59,7 +66,10 @@ class network_producer(queue_skeleton, recv_network):
     def __init__(self, in_que, lock, port, logger, timeout):
         queue_skeleton.__init__(self, in_que, None, lock, logger, timeout)
         recv_network.__init__(self, port)
+        print("Spawned recv network")
         self.running = True
+        print("Spawned network producer")
+        print(self.running)
 
     def halt_thread(self):
         self.running = False
@@ -68,7 +78,13 @@ class network_producer(queue_skeleton, recv_network):
     def run(self):
         while(self.running):
             try:
-                self.enqueue(self.listen_data())
+                print("began listening")
+                #Setting timeout of 3 seconds 
+                temp, _ = self.listen_data(3)
+                if(temp == -1):
+                    self.logger.log_error("Socket timeout occured")
+                print("stopped listening")
+                self.enqueue(temp)
                 #TESTING ON PC
                 #self.enqueue(Packet(0, 0, 0, 0))
                 #print(self.que.qsize())
@@ -84,6 +100,7 @@ class network_consumer(queue_skeleton, send_network):
         send_network.__init__(self, port)
         self.running = True
         self.timeout = timeout
+        print("Spawned network consumer")
 
     def halt_thread(self):
         self.running = False
@@ -93,6 +110,7 @@ class network_consumer(queue_skeleton, send_network):
             try:
                 p = self.dequeue()
                 #testing on pc
+                net.printPkt(p, 0)
                 #print(net.printPkt(p, 3))
                 self.enqueue(p)
             except:
