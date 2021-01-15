@@ -83,27 +83,35 @@ class network_producer(queue_skeleton, recv_network):
                 self.enqueue(temp)
                 #print("Producer outque size: ", self.outque.qsize())
             except:
+                if(self.outque.check_full()):
+                    self.logger.log_error("Network Producer output queue is full")
                 continue
-            timing.sleep_for(2)
 
 class network_consumer(queue_skeleton, send_network):
 
     """Constructor"""
-    def __init__(self, in_que, out_que, lock, logger, timeout):
-        queue_skeleton.__init__(self, in_que, out_que, lock, logger, timeout)
+    def __init__(self, in_que, out_que, lock, logger, thr_timeout):
+        queue_skeleton.__init__(self, in_que, out_que, lock, logger, thr_timeout)
         self.running = True
-        self.timeout = timeout
-        print("Spawned network consumer")
+        self.timeout = thr_timeout
 
     def halt_thread(self):
         self.running = False
 
     def run(self):
         while(self.running):
+
+            #verify that queue isn't empty
+            if(self.inque.check_empty()):
+                timing.sleep_for(self.timeout)
+
             try:
-                print("Consumer inque size: ", self.inque.qsize())
-                p = self.dequeue()
-                #net.printPkt(p, 7)
-                self.enqueue(p)
+                if(not self.inque.check_empty()):
+                    p = self.dequeue()
+                    #net.printPkt(p, 7)
+                    self.enqueue(p)
+                #timeout becasue there is no data in the queue, will be respawned later
+                else:
+                    return 
             except:
                 self.logger.log_error("Could not deque packet")
