@@ -1,6 +1,6 @@
 """
 Synchronization file for smart aspahlt's platooning code
-Last revision: January 15th, 2020
+Last revision: January 21st, 2020
 """
 
 import threading
@@ -11,13 +11,13 @@ from threading import Lock
 from network import recv_network, send_network
 from logger import Sys_logger, Data_logger
 from Packet import Packet
+from sensor import Encoder, GPIO_Interaction
 
 class queue_skeleton(threading.Thread):
 
     """ Constructor """
     def __init__(self, inque, outque, lock, logger, timeout):
         threading.Thread.__init__(self)
-        #initialize infinite queue
         self.inque = inque
         self.outque = outque
         self.lock = lock
@@ -67,7 +67,6 @@ class network_producer(queue_skeleton, recv_network):
         queue_skeleton.__init__(self, None, out_que, lock, logger, timeout)
         recv_network.__init__(self, port)
         self.running = True
-        print(self.running)
 
     def halt_thread(self):
         self.running = False
@@ -85,9 +84,8 @@ class network_producer(queue_skeleton, recv_network):
             except:
                 if(self.outque.check_full()):
                     self.logger.log_error("Network Producer output queue is full")
-                continue
 
-class network_consumer(queue_skeleton, send_network):
+class network_consumer(queue_skeleton):
 
     """Constructor"""
     def __init__(self, in_que, out_que, lock, logger, thr_timeout):
@@ -105,13 +103,61 @@ class network_consumer(queue_skeleton, send_network):
             if(self.inque.check_empty()):
                 timing.sleep_for(self.timeout)
 
-            try:
-                if(not self.inque.check_empty()):
+            if(not self.inque.check_empty()):
+                try:
                     p = self.dequeue()
                     #net.printPkt(p, 7)
                     self.enqueue(p)
-                #timeout becasue there is no data in the queue, will be respawned later
-                else:
-                    return 
+                except:
+                    self.logger.log_error("Could not deque packet")
+            #timeout becasue there is no data in the queue, will be respawned later
+            else:
+                return 
+
+class encoder_producer(queue_skeleton, Encoder):
+
+    """Constructor"""
+    def __init__(self, out_que, lock, channel, logger, timeout):
+        queue_skeleton.__init__(self, None, out_que, lock, logger, timeout)
+        Encoder.__init__(self, channel) 
+        self.running = True
+
+    def halt_thread(self):
+        self.running = False
+
+    #enqueue encoder values 
+    def run(self):
+        while(self.running):
+            try:
+                val = self.get_speed()
+                self.enqueue(val)
             except:
-                self.logger.log_error("Could not deque packet")
+                self.logger.log_error("Failed to read encoder value")
+
+class encoder_consumer(queue_skeleton):
+
+    """Constructor"""
+    def __init__(self, in_que, out_que, lock, logger, thr_timeout):
+        queue_skeleton.__init__(self, in_que, out_que, lock, logger, thr_timeout)
+        self.running = True
+        self.timeout = thr_timeout
+
+    def halt_thread(self):
+        self.running = False
+
+    def run(self):
+        while(self.running):
+
+            #verify that queue isn't empty
+            if(self.inque.check_empty()):
+                timing.sleep_for(self.timeout)
+
+            if(not self.inque.check_empty()):
+                try:
+                    val = self.dequeue()
+                    self.enqueue(val)
+                except:
+                    self.logger.log_error("Could not deque encoder data")
+            #timeout becasue there is no data in the queue, will be respawned later
+            else:
+                return 
