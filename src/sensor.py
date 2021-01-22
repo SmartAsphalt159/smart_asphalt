@@ -1,7 +1,7 @@
 #/usr/bin/python3
 
 import Jetson.GPIO as GPIO
-from time import time
+import time
 
 #NOTE: channel indicates GPIO port
 
@@ -18,7 +18,8 @@ class GPIO_Interaction():
         self.motor_pwm = GPIO.PWM(self.motor_ch, 50)
 
     def shut_down(self):
-        self.pwm.stop()
+        self.servo_pwm.stop()
+        self.motor_pwm.stop()
         GPIO.cleanup()
 
     def format(self, val): #-10 => 8.5 10=>5.5
@@ -43,7 +44,7 @@ class Encoder():
         self.r = tire_r
         self.tally = 0
         self.last_time = time.time()
-        GPIO.add_event_detect(self.channel, GPIO.EITHER,callback=self.on_edge)
+        GPIO.add_event_detect(self.channel, GPIO.HIGH, callback=self.on_edge)
 
     def on_edge(self):
         self.tally += 1
