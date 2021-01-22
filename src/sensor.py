@@ -44,7 +44,7 @@ class Encoder():
         self.r = tire_r
         self.tally = 0
         self.last_time = time.time()
-        GPIO.add_event_detect(self.channel, GPIO.HIGH, callback=self.on_edge)
+        GPIO.add_event_detect(self.channel, GPIO.BOTH,callback=self.on_edge)
 
     def on_edge(self):
         self.tally += 1
