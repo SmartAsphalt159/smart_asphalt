@@ -18,7 +18,7 @@ class network_metrics_collection():
     # use a UUID, if receiving store data in columns.
     # 3. 
 
-    def __init__(self, send_port=1, recv_port=2, file_root_name="metrics") -> None:
+    def __init__(self, send_port=1, recv_port=2, file_root_name="metrics"):
         ''' Constructor that initializes a connection with another 
             device in Ad Hoc Network and needed files for metrics
             collecton.
@@ -85,12 +85,11 @@ class network_metrics_collection():
             sleep(init_delay)
             for data in test_data: 
                 self.sender_node.broadcast_data(data['braking'], data['steering'], data['speed'], data['timestamp'])
-                file.write('data' + str(data) + ' ' + str(data['braking']) + str(data['steering']) 
-                        + str(data['speed']) + str(data['timestamp']) + '\n')
+                file.write('data' + str(data) + ' ' + str(data['braking']) + str(data['steering']) + str(data['speed']) + str(data['timestamp']) + '\n')
                 sleep(1)
             file.close()
         elif(mode == 'r'):
-            recv_data = self.receive_node.listen_data(5)
+            recv_data = self.receive_node.listen_data(120)
             if recv_data == -1:
                 print("No Data Received!")
             else:
@@ -100,7 +99,7 @@ class network_metrics_collection():
                     print("Error in run_network_test: File Already Exists!")
                 except TypeError:
                     raise TypeError("Error in run_network_test: Typing Issue in Parameters")
-                print(type(recv_data), recv_data)ls
+                print(type(recv_data), recv_data)
                 #file.write('packet recvd: ' + str(elapsed_time) +' '+ str(recv_packet))
                 file.close()
         else:

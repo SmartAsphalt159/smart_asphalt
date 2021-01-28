@@ -39,7 +39,7 @@ def bind_skt(port, skt_type):
     return skt
 
 def printPkt(pkt, address):
-    print(f"{address}, {pkt.braking}, {pkt.steering}, {pkt.speed}, {pkt.timestamp}\n")
+    print(str(address) + ': '+ str(pkt) + '\n')
 
 class send_network():
 
@@ -54,7 +54,7 @@ class send_network():
 
 class recv_network():
 
-    """ Constructor """
+    """ Constructor """git st
     def __init__(self, port):
             self.recv_port = bind_port(port, 1)
             self.recvskt = bind_skt(self.recv_port, 1)
