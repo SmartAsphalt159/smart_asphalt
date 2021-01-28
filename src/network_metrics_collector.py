@@ -90,13 +90,22 @@ class network_metrics_collection():
                 sleep(1)
             file.close()
         elif(mode == 'r'):
-            recv_packet, elapsed_time = self.receive_node.listen_data(30)
-            file = open(self.sender_node, "w")
-            file.write('packet recvd: ' + str(elapsed_time) +' '+ str(recv_packet))
-            file.close()
+            recv_data = self.receive_node.listen_data(5)
+            if recv_data == -1:
+                print("No Data Received!")
+            else:
+                try:
+                    file = open(self.recv_file_name, 'w')
+                except FileExistsError:
+                    print("Error in run_network_test: File Already Exists!")
+                except TypeError:
+                    raise TypeError("Error in run_network_test: Typing Issue in Parameters")
+                print(type(recv_data), recv_data)ls
+                #file.write('packet recvd: ' + str(elapsed_time) +' '+ str(recv_packet))
+                file.close()
         else:
             print("Arguement for 'mode' is Invalid: please use 's' or 'r'!")
 
 if __name__ == '__main__':
     nmc = network_metrics_collection()
-    nmc.run_network_test(1, 5)
+    nmc.run_network_test(1, 5, 'r')
