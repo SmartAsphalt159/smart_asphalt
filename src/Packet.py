@@ -54,3 +54,5 @@ class Packet:
         #return okay
         return 0
 
+    def __str__(self):
+        return 'Packet(breaking: ' + str(self.braking) + ', steering: ' + str(self.steering) + ', speed: ' + str(self.speed) + ', timestamp: ' + str(self.timestamp) + ')'
