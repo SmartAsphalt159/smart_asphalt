@@ -4,7 +4,6 @@ from uuid import uuid4
 from timing import get_current_time
 from time import sleep
 from sys import exc_info
-from os import open
 
 class network_metrics_collection():
     ''' Collection of methods to test the network and get data on its performance'''
@@ -76,10 +75,13 @@ class network_metrics_collection():
         '''      
         if (mode == 's'):
             test_data = self.generate_test_data(size)
+            #file = open(self.send_file_name, 'w')
             try:
-                file = open(self.sender_node, "a")
-            except:
-                print("Error Reading file in run_network_test")
+                file = open(self.send_file_name, 'w')
+            except FileExistsError:
+                print("Error in run_network_test: File Already Exists!")
+            except TypeError:
+                raise TypeError("Error in run_network_test: Typing Issue in Parameters")
             sleep(init_delay)
             for data in test_data: 
                 self.sender_node.broadcast_data(data['braking'], data['steering'], data['speed'], data['timestamp'])
