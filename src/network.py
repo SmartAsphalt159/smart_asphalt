@@ -54,7 +54,7 @@ class send_network():
 
 class recv_network():
 
-    """ Constructor """git st
+    """ Constructor """
     def __init__(self, port):
             self.recv_port = bind_port(port, 1)
             self.recvskt = bind_skt(self.recv_port, 1)
