@@ -4,12 +4,11 @@ from math import sqrt, abs, cos, sin, pi, floor, tan, atan
 from rplidar import RPLidar
 
 class Object:
-    def __init__(self, pixels, filter_len, last_time, threshold_size,
-                 rel_velocity, last_center, box_len, sample, err_fac=1, obj_found):
+    def __init__(self, pixels, filter_len, last_time, threshold_size,rel_velocity, last_center, box_len, sample, obj_found,err_fac=1):
         self.pixels = pixels
         self.filter_len = filter_len
         self.last_time = last_time
-        self.this_time = time.time()
+        self.this_time = time()
         self.threshold_size = threshold_size
         self.velocity = rel_velocity
         self.last_center = last_center
@@ -23,50 +22,62 @@ class Object:
         self.angle = None
         self.correct_object_score = None
         self.last_pixels = None
+        self.passed = False
 
         if not self.len_filter():
-            return False
+            self.passed = False
+
+            return None
 
         self.find_size()
 
         if not self.size_filter():
-            return False
+            self.passed = False
+
+            return None
 
         if not self.obj_found:
-            return True
+            self.passed = True
+            print("size x:",self.size[0]," y: ",self.size[1],"\n")
+            print("at:",self.midpoint)
+            return None
 
         if not self.location_filter():
-            return False
+            self.passed = False
+            return None
         else:
-            return True
+            self.passed=True
+            return None
 
     def len_filter(self):
-        if len(self.pixels) >  self.filter_len:
+        #print("len = ", len(self.pixels[0]))
+        if len(self.pixels[0]) >  self.filter_len:
             return True
         else:
             return False
 
     """pass this object through filter. Objects too large/small are cut"""
     def size_filter(self):
-        if self.size[0] > threshold_size and self.size[1] > threshold_size:
+
+        if self.size[0] > self.threshold_size or self.size[1] > self.threshold_size:
             return False
         else:
             return True
 
     def location_filter(self):
-        if rel_velocity:
+        if self.velocity:
             d_t = self.this_time - self.last_time
-            d_pos = rel_velocity*d_t
+            d_pos = (self.velocity[0]*d_t,self.velocity[1]*d_t)
             d_pos_mag = sqrt(d_pos[0]**2 + d_pos[1]**2)
             err = self.err_fac*(2*1.41*(self.box_len/2) + 2*d_pos_mag)
-            est_pos = (last_center[0] + d_pos[0],last_center[1] + d_pos[1])
+            est_pos = (self.last_center[0] + d_pos[0],self.last_center[1] + d_pos[1])
             if abs(est_pos[0]-self.midpoint[0]) < err and abs(est_pos[1]-self.midpoint[1]) < err:
                 return True
             else:
                 return False
         else:
             err = self.err_fac*(2*1.41*(self.box_len/2)*3)
-            est_pos = (last_center[0] + d_pos[0],last_center[1])
+            est_pos = (self.last_center[0],self.last_center[1])
             if abs(est_pos[0]-self.midpoint[0]) < err and abs(est_pos[1]-self.midpoint[1]) < err:
                 return True
             else:
@@ -75,17 +86,17 @@ class Object:
     """find a size of box that all samples fit into"""
     def find_size(self):
         minx = maxx = self.pixels[0][0]
-        maxy = miny = self.pixels[0][1]
+        maxy = miny = self.pixels[1][0]
 
-        for x,y in self.pixels:
+        for i,x in enumerate(self.pixels[0]):
             if x > maxx:
                 maxx = x
-            if y > maxy:
-                maxy = y
+            if self.pixels[1][i] > maxy:
+                maxy = self.pixels[1][i]
             if x < minx:
                 minx = x
-            if y < miny:
-                miny = y
+            if self.pixels[1][i] < miny:
+                miny = self.pixels[1][i]
 
         self.size = (maxx-minx, maxy-miny)
         self.midpoint = (minx + self.size[0]/2,miny+ self.size[1]/2)
@@ -102,7 +113,12 @@ class Object:
         self.center = (x_sum/a,ysum/a)
 
     """compare last object to this object and return likely hood of being the same"""
-    def find_likeness(self, sample):
+    def find_likeness(self):
+        if self.midpoint[0] <= -200:
+            return 0
+        else:
+            distance = (self.midpoint[0]**2+self.midpoint[1]**2)**0.5
+            return 1000/distance
         return likeness
 
 
@@ -155,38 +171,61 @@ class Lidar():
 
         return scan
 
-    def polar_to_cartesian(self,polar):
+
+
+    def polar_to_cartesian(angle,distance):
+        #may need to change due to reflection issues
+        rad = 180/pi
+        _tx = cos(float(angle)*rad)*float(distance)
+        _ty = -sin(float(angle)*rad)*float(distance)
+
+        cartesian = (_tx,_ty)
+        return cartesian
+
+    def polar_to_cartesian_full(self,polar):
         for index, (angle, distance) in polar:
             #may need to change due to reflection issues
-            x = cos(angle*(180/pi))*distance
-            y = -sin(angle*(180/pi))*distance
+            x = cos(float(angle)*rad)*float(distance)
+            y = -sin(float(angle)*rad)*float(distance)
             polar[index] = (x,y)
         cartesian = polar
         return cartesian
 
-    def break_DCs(self, polar, threshold):      #tries to break up scan by discontinuities
-        breaklist = []
+    def break_DCs(self, polar, threshold, length):      #tries to break up scan by discontinuities
+        break_list = []
         for index, (angle, distance) in enumerate(polar):
             if index == len(polar)-1:
-                if abs(distance-(polar[0][1]+polar[1][1])/2) > threshold:  #make this loop around
-                    break_list.append(angle+0.5)
-            elif index == len(polar)-2:
-                if abs(distance-(polar[index+1][1]+polar[0][1])/2) > threshold:  #make this loop around
-                    break_list.append(angle+0.5)
-            elif abs(distance-(polar[index+1][1]+polar[index+2][1])/2) > threshold:  #make this loop around
-                break_list.append(angle+0.5)
-
-        broken_objects = []*len(break_list)
-        for index, angle in enumerate(break_list):
-            broken_objects[index] = []
-            if index != len(break_list)-1
-                for a,d in polar:
-                    if a > angle and a < break_list[index+1]:
-                        broken_objects[index].append((a,d))
+                if abs(distance-polar[0][1]) > threshold:  #make this loop around
+                    #break_list.append(angle+0.5)
+                    break_list.append(polar[0][0]-0.5)
             else:
+                #print("distance: " + str(abs(distance-(polar[index+1][1]+polar[index+2][1])/2)))
+                if abs(distance-polar[index+1][1]) > threshold:  #make this loop around
+                    #break_list.append(angle+0.5)
+                    break_list.append(polar[index+1][0]-0.5)
+                    break_list.sort()
+
+        broken_objects = []
+        for index, angle in enumerate(break_list):
+            if index == len(break_list)-1:
+                temp = ([],[])
                 for a,d in polar:
-                    if a > angle and a < break_list[0]:
-                        broken_objects[index].append((a,d))
+
+                    if a > break_list[index] or a < break_list[0]:
+                        lx,ly=self.polar_to_cartesian(a,d)
+
+                        temp[0].append(lx)
+                        temp[1].append(ly)
+                broken_objects.append(temp)
+
+            else:
+                temp = ([],[])
+                for a,d in polar:
+                    if a > break_list[index] and a < break_list[index+1]:
+                        lx,ly=self.polar_to_cartesian(a,d)
+                        temp[0].append(lx)
+                        temp[1].append(ly)
+                broken_objects.append(temp)
 
         return broken_objects
 
@@ -195,84 +234,48 @@ class Lidar():
         b_scan = self.break_DCs(scan,30)
         return b_scan
 
-    def find_object(self):
-        if self.object_found:
-            broken_scans = self.scan_break_make_objects()
-            object_list = []
-            for scan in broken_scans:
-                sc = polar_to_cartesian(scan)
-                obj = Object(sc, filter_len=3, last_time=None, threshold_size=40,
-                             rel_velocity=None, last_center=None, box_len=15,
-                             sample=None, err_fac=1, object_found=False)
-                if obj:
-                    object_list.append()
-            l = len(object_list)
-            if l == 0:
-                #no objects found
-                self.last_velocity = None
-                empty_scans += 1
-                if empty_scans > 5:
-                    #stop car
-                    return None
-            elif l == 1:
-                self.object_found = True
-                self.last_obj = object_list[0]
-                return object_list[0]
+    def find_object(self,broken_scans):
+        break_list = []
+        for index, (angle, distance) in enumerate(polar):
+            if index == len(polar)-1:
+                if abs(distance-polar[0][1]) > threshold:  #make this loop around
+                    #break_list.append(angle+0.5)
+                    break_list.append(polar[0][0]-0.5)
             else:
-                self.object_found = True
-                max_likeness = 0
-                max_index = 0
-                for index, obj in enumerate(object_list):
-                    likeness = obj.find_likeness()
-                    if likeness > max_likeness:
-                        max_likeness = likeness
-                        max_index = index
-                self.last_obj = object_list[index]
-                return object_list[index]
-        else:
-            now = time.time()
-            broken_scans = self.scan_break_make_objects()
-            object_list = []
-            for scan in broken_scans:
-                sc = polar_to_cartesian(scan)
-                lt = self.last_obj.this_time
-                center = self.last_obj.midpoint
-                if self.last_obj.last_center:
-                    velocity = self.update_velocity(self.last_obj)
-                else:
-                    velocity = None
-                obj = Object(sc, filter_len=3, last_time=lt, threshold_size=40,
-                             rel_velocity=velocity, last_center=center,
-                             box_len=15, sample=None, err_fac=1, object_found=True)
-                if obj:
-                    object_list.append()
-            l = len(object_list)
-            if l == 0:
-                #no objects found
-                self.last_velocity = None
-                self.object_found = False
-                self.empty_scans += 1
-                if self.empty_scans > 5:
-                    #stop car
-                    return None
-            elif l == 1:
-                self.last_obj = object_list[0]
-                return object_list[0]
+                #print("distance: " + str(abs(distance-(polar[index+1][1]+polar[index+2][1])/2)))
+                if abs(distance-polar[index+1][1]) > threshold:  #make this loop around
+                    #break_list.append(angle+0.5)
+                    break_list.append(polar[index+1][0]-0.5)
+                    break_list.sort()
+
+        broken_objects = []
+        for index, angle in enumerate(break_list):
+            if index == len(break_list)-1:
+                temp = ([],[])
+                for a,d in polar:
+
+                    if a > break_list[index] or a < break_list[0]:
+                        lx,ly=self.polar_to_cartesian(a,d)
+
+                        temp[0].append(lx)
+                        temp[1].append(ly)
+                broken_objects.append(temp)
+
             else:
-                max_likeness = 0
-                max_index = 0
-                for index, obj in enumerate(object_list):
-                    likeness = obj.find_likeness()
-                    if likeness > max_likeness:
-                        max_likeness = likeness
-                        max_index = index
-                self.last_obj = object_list[0]
-                return object_list[index]
+                temp = ([],[])
+                for a,d in polar:
+                    if a > break_list[index] and a < break_list[index+1]:
+                        lx,ly=self.polar_to_cartesian(a,d)
+                        temp[0].append(lx)
+                        temp[1].append(ly)
+                broken_objects.append(temp)
+
+        return broken_objects
 
     def update_velocity(self, object):
         delta_t = object.this_time - object.last_time
         delta_p = (abs(object.last_center[0]-object.midpoint[0]), abs(object.last_center[1]-object.midpoint[1]))
-        delta_v = delta_p/delta_v
+        delta_v = (delta_p[0]/delta_t, delta_p[1]/delta_t)
         return delta_v
 
     def get_position(self, object):
@@ -283,3 +286,11 @@ class Lidar():
 
     def get_velocity(self, object):
         return object.velocity
+
+
+"""
+#to run
+scan1 = l.do_scan(_theta,_r)
+broken = l.break_DCs(scan1,400,200)
+obj = l.find_obj1(broken)
+"""
