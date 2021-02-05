@@ -2,16 +2,20 @@
 from time import time
 from math import sqrt, abs, cos, sin, pi, floor, tan, atan
 from rplidar import RPLidar
+import numpy as np
 
 class Object:
-    def __init__(self, pixels, ts, threshold_size, rel_velocity, last_center, box_len, sample, err_fac=1):
+    def __init__(self, pixels, filter_len, last_time, threshold_size,rel_velocity, last_center, box_len, sample, obj_found,err_fac=1):
         self.pixels = pixels
-        self.time_sampled = ts
+        self.filter_len = filter_len
+        self.last_time = last_time
+        self.this_time = time()
         self.threshold_size = threshold_size
         self.velocity = rel_velocity
         self.last_center = last_center
         self.box_len = box_len
         self.err_fac = err_fac
+        self.obj_found = obj_found
 
         self.size = None
         self.midpoint = None
@@ -19,67 +23,169 @@ class Object:
         self.angle = None
         self.correct_object_score = None
         self.last_pixels = None
+        self.passed = False
+
+        if not self.len_filter():
+            self.passed = False
+
+            return None
 
         self.find_size()
 
         if not self.size_filter():
+            self.passed = False
+
+            return None
+
+        print("size x:",self.size[0]," y: ",self.size[1])
+        print("at:",self.midpoint)
+
+        if not self.obj_found:
+            self.passed = True
+
             return None
 
         if not self.location_filter():
+            self.passed = False
+            print("failed location")
+            print("velocity",self.velocity)
             return None
+        else:
+            self.passed=True
+            return None
+
+    def len_filter(self):
+        #print("len = ", len(self.pixels[0]))
+        if len(self.pixels[0]) >  self.filter_len:
+            return True
+        else:
+            return False
 
     """pass this object through filter. Objects too large/small are cut"""
     def size_filter(self):
-        if self.size[0] > threshold_size and self.size[1] > threshold_size:
+
+        if self.size[0] > self.threshold_size or self.size[1] > self.threshold_size:
             return False
         else:
             return True
 
     def location_filter(self):
-        now = time.time()
-        d_t = self.time_sampled - now
-        d_pos = rel_velocity*d_t
-        d_pos_mag = sqrt(d_pos[0]**2 + d_pos[1]**2)
-        err = self.err_fac*(2*1.41*(self.box_len/2) + 2*d_pos_mag)
-        est_pos = (last_center[0] + d_pos[0],last_center[1] + d_pos[1])
-        if abs(est_pos[0]-self.midpoint[0]) < err and abs(est_pos[1]-self.midpoint[1]) < err:
-            return True
+        if self.velocity:
+            d_t = self.this_time - self.last_time
+            d_pos = (self.velocity[0]*d_t,self.velocity[1]*d_t)
+            d_pos_mag = sqrt(d_pos[0]**2 + d_pos[1]**2)
+            err = self.err_fac*(2*1.41*(self.box_len/2) + 2*d_pos_mag)
+            est_pos = (self.last_center[0] + d_pos[0],self.last_center[1] + d_pos[1])
+            if abs(est_pos[0]-self.midpoint[0]) < err and abs(est_pos[1]-self.midpoint[1]) < err:
+                return True
+            else:
+                return False
         else:
-            return False
+            err = self.err_fac*(2*1.41*(self.box_len/2)*3)
+            est_pos = (self.last_center[0],self.last_center[1])
+            if abs(est_pos[0]-self.midpoint[0]) < err and abs(est_pos[1]-self.midpoint[1]) < err:
+                return True
+            else:
+                return False
 
     """find a size of box that all samples fit into"""
     def find_size(self):
         minx = maxx = self.pixels[0][0]
-        maxy = miny = self.pixels[0][1]
+        miny = maxy = self.pixels[1][0]
 
-        for x,y in self.pixels:
-            if x > maxx:
-                maxx = x
-            if y > maxy:
-                maxy = y
-            if x < minx:
-                minx = x
-            if y < miny:
-                miny = y
+        for index in range(len(self.pixels[0][1:])):
+            mx = self.pixels[0][index]
+            my = self.pixels[1][index]
+            if mx < minx:
+                minx = mx
+            elif mx > maxx:
+                maxx = mx
+
+            if my < miny:
+                miny = my
+            elif my > maxy:
+                maxy = my
 
         self.size = (maxx-minx, maxy-miny)
         self.midpoint = (minx + self.size[0]/2,miny+ self.size[1]/2)
 
-    def find_center(self):
-        #possibly use hough transform
-        #center is the actual center not the midpoint of the box after chosen
-        x_sum = y_sum = 0
-        for x,y in self.pixels:
-            x_sum += x
-            y_sum += y
-
-        a = len(self.pixels)
-        self.center = (x_sum/a,ysum/a)
-
     """compare last object to this object and return likely hood of being the same"""
-    def find_likeness(self, sample):
+    def find_likeness(self):
+        if self.midpoint[0] <= -200:
+            return 0
+        else:
+            distance = (self.midpoint[0]**2+self.midpoint[1]**2)**0.5
+            return 1000/distance
         return likeness
 
+    def find_line_points(self,threshold):   #refrenced from https://github.com/Robotics-kosta/AMR-Line-extraction-from-Lidar-sensor-with-Split-and-Merge-algorithm/blob/master/src/main.py
+        points = np.transpose(np.array(self.pixels))
+        lines = self.SAM(points,threshold)
+        return lines    #returns lines as endpoints
+
+    def SAM(self,points,threshold):
+        max_d,index = self.find_distant(points)
+        if max_d > threshold:
+            points1 = self.SAM(points[:index+1],threshold)
+            points2 = self.SAM(points[index:],threshold)
+            npoints = np.vstack((points1[:-1],points2))
+        else:
+            npoints = np.vstack((points[0],points[-1]))
+        return npoints
+
+    def find_distant(self,points):
+        max_d = 0
+        index = -1
+        for i in range(1,points.shape[0]):
+            d = self.get_d(points[i],points[0],points[-1])
+            if (d > max_d):
+                index = i
+                max_d = d
+        return (max_d,index)
+
+    def get_d(self,p,pstart,pend):
+        if np.all(np.equal(pstart,pend)):
+            return np.linalg.norm(p-pstart)
+        return np.divide(np.abs(np.linalg.norm(np.cross(pend-pstart,pstart-p))),np.linalg.norm(pend-pstart))
+
+    def find_line_data(self,p1,p2):
+        center = (p2+p1)/2                  #center of line segment
+        length = np.linalg.norm(p2-p1)      #length of line segment
+        dp = np.flip(p2-p1)* np.array([-1,1])
+        angle = np.arctan(dp[1]/dp[0])*180/np.pi      #angle from x axis to normal of line
+
+        return angle, center, length
+
+    def find_line_lines(self,lines):
+        line_list = []
+        for index in range(1,lines.shape[0]):
+             line_list.append(self.find_line_data(lines[index-1],lines[index]))
+        return line_list
+
+    def filtered_lines(self,lines):
+        threshold = 5
+        if len(lines) > 2:
+            filtered = []
+            indexes = []
+            for index in range(len(lines)):
+                for i in range(len(lines)):
+                    if index != i:
+                        if lines[index][0] + 90 < lines[i][0] + threshold and lines[index][0] + 90 > lines[i][0] - threshold:
+                            if index not in indexes:
+                                indexes.append(index)
+                            if i not in indexes:
+                                indexes.append(i)
+                        elif lines[index][0] - 90 < lines[i][0] + threshold and lines[index][0] - 90 > lines[i][0] - threshold:
+                            if index not in indexes:
+                                indexes.append(index)
+                            if i not in indexes:
+                                indexes.append(i)
+
+                for k in indexes:
+                    filtered.append(lines[k])
+                return filtered
+        else:
+            return lines
 
 class Lidar():
     def __init__(self, USB_port='/dev/ttyUSB0'):
@@ -88,6 +194,10 @@ class Lidar():
         self.time_last = 0
         self.last_measurement = None
         self.iterator = self.lidar.iter_measurments(540)
+        self.object_found = False
+        self.empty_scans = 0
+        self.last_obj = None
+        self.last_velocity = None
 
     def print_health(self):
         print(self.lidar.health())
@@ -124,37 +234,129 @@ class Lidar():
 
             last = angle
 
-    def polar_to_cartesian(self,polar):
-        for index, (angle, distance) in polar:
-            #may need to change due to reflection issues
-            x = cos(angle*(180/pi))*distance
-            y = -sin(angle*(180/pi))*distance
-            polar[index] = (x,y)
-        cartesian = polar
+        return scan
+
+
+
+    def polar_to_cartesian(angle,distance):
+        tx_ = np.cos((float(angle)*np.pi/180))*float(distance)
+        ty_ = -np.sin((float(angle)*np.pi/180))*float(distance)
+
+        cartesian = (tx_,ty_)
+        return cartesian
+
+    def polar_to_cartesian_full(self,polar):
+        cartesian = [[],[]]
+        for angle,distance in polar:
+            x = np.cos(float(angle)*np.pi/180)*float(distance)
+            y = -np.sin(float(angle)*np.pi/180)*float(distance)
+            cartesian[0].append(x)
+            cartesian[1].append(y)
         return cartesian
 
     def break_DCs(self, polar, threshold, length):      #tries to break up scan by discontinuities
-        breaklist = []
+        break_list = []
         for index, (angle, distance) in enumerate(polar):
             if index == len(polar)-1:
-                if abs(distance-(polar[0][1]+polar[1][1])/2) > threshold:  #make this loop around
-                    break_list.append(angle+0.5)
-            elif index == len(polar)-2:
-                if abs(distance-(polar[index+1][1]+polar[0][1])/2) > threshold:  #make this loop around
-                    break_list.append(angle+0.5)
-            elif abs(distance-(polar[index+1][1]+polar[index+2][1])/2) > threshold:  #make this loop around
-                break_list.append(angle+0.5)
-
-        broken_objects = []*len(break_list)
-        for index, angle in enumerate(break_list):
-            broken_objects[index] = []
-            if index != len(break_list)-1
-                for a,d in polar:
-                    if a > angle and a < break_list[index+1]:
-                        broken_objects[index].append((a,d))
+                if abs(distance-polar[0][1]) > threshold:  #make this loop around
+                    #break_list.append(angle+0.5)
+                    break_list.append(polar[0][0]-0.5)
             else:
+                #print("distance: " + str(abs(distance-(polar[index+1][1]+polar[index+2][1])/2)))
+                if abs(distance-polar[index+1][1]) > threshold:  #make this loop around
+                    #break_list.append(angle+0.5)
+                    break_list.append(polar[index+1][0]-0.5)
+                    break_list.sort()
+
+        broken_objects = []
+        for index, angle in enumerate(break_list):
+            if index == len(break_list)-1:
+                temp = ([],[])
                 for a,d in polar:
-                    if a > angle and a < break_list[0]:
-                        broken_objects[index].append((a,d))
+
+                    if a > break_list[index] or a < break_list[0]:
+                        lx,ly=self.polar_to_cartesian(a,d)
+
+                        temp[0].append(lx)
+                        temp[1].append(ly)
+                broken_objects.append(temp)
+
+            else:
+                temp = ([],[])
+                for a,d in polar:
+                    if a > break_list[index] and a < break_list[index+1]:
+                        lx,ly=self.polar_to_cartesian(a,d)
+                        temp[0].append(lx)
+                        temp[1].append(ly)
+                broken_objects.append(temp)
 
         return broken_objects
+
+    def scan_break_make_objects(self):
+        scan = self.do_scan()
+        b_scan = self.break_DCs(scan,30)
+        return b_scan
+
+    def find_object(self,broken_scans):
+        break_list = []
+        for index, (angle, distance) in enumerate(polar):
+            if index == len(polar)-1:
+                if abs(distance-polar[0][1]) > threshold:  #make this loop around
+                    #break_list.append(angle+0.5)
+                    break_list.append(polar[0][0]-0.5)
+            else:
+                #print("distance: " + str(abs(distance-(polar[index+1][1]+polar[index+2][1])/2)))
+                if abs(distance-polar[index+1][1]) > threshold:  #make this loop around
+                    #break_list.append(angle+0.5)
+                    break_list.append(polar[index+1][0]-0.5)
+                    break_list.sort()
+
+        broken_objects = []
+        for index, angle in enumerate(break_list):
+            if index == len(break_list)-1:
+                temp = ([],[])
+                for a,d in polar:
+
+                    if a > break_list[index] or a < break_list[0]:
+                        lx,ly=self.polar_to_cartesian(a,d)
+
+                        temp[0].append(lx)
+                        temp[1].append(ly)
+                broken_objects.append(temp)
+
+            else:
+                temp = ([],[])
+                for a,d in polar:
+                    if a > break_list[index] and a < break_list[index+1]:
+                        lx,ly=self.polar_to_cartesian(a,d)
+                        temp[0].append(lx)
+                        temp[1].append(ly)
+                broken_objects.append(temp)
+
+        return broken_objects
+
+    def update_velocity(self, object):
+        delta_t = object.this_time - object.last_time
+        delta_p = (abs(object.last_center[0]-object.midpoint[0]), abs(object.last_center[1]-object.midpoint[1]))
+        delta_v = (delta_p[0]/delta_t, delta_p[1]/delta_t)
+        return delta_v
+
+    def get_position(self, object):
+        if object.center:
+            return object.center
+        else:
+            return object.midpoint
+
+    def get_velocity(self, object):
+        return object.velocity
+
+
+"""
+#to run
+scan1 = l.do_scan(_theta,_r)
+broken = l.break_DCs(scan1,400,200)
+obj = l.find_obj1(broken)
+if obj:
+    lines = obj.find_line_lines(line_points)
+    lines = obj.filtered_lines(lines)
+"""
