@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 """
 Timing file for smart asphalt's platooning code
 Timing is done in epoch time, to stay consistent with standards. 

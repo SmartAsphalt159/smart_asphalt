@@ -1,4 +1,4 @@
-#/usr/bin/python3
+#!/usr/bin/python3
 
 """
 Networking implementation for smart asphalt's platoon
