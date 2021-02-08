@@ -236,8 +236,6 @@ class Lidar():
 
         return scan
 
-
-
     def polar_to_cartesian(angle,distance):
         tx_ = np.cos((float(angle)*np.pi/180))*float(distance)
         ty_ = -np.sin((float(angle)*np.pi/180))*float(distance)
@@ -297,43 +295,94 @@ class Lidar():
         b_scan = self.break_DCs(scan,30)
         return b_scan
 
-    def find_object(self,broken_scans):
-        break_list = []
-        for index, (angle, distance) in enumerate(polar):
-            if index == len(polar)-1:
-                if abs(distance-polar[0][1]) > threshold:  #make this loop around
-                    #break_list.append(angle+0.5)
-                    break_list.append(polar[0][0]-0.5)
+    def find_obj(self, broken_scans):
+        if not self.object_found:
+            object_list = []
+            for num,scan in enumerate(broken_scans):
+                obj = Object(scan, filter_len=4, last_time=None, threshold_size=250,
+                             rel_velocity=None, last_center=None, box_len=150,
+                             sample=None, obj_found=False, err_fac=1)
+                if obj.passed:
+                    object_list.append(obj)
+            l = len(object_list)
+            if l == 0:
+                #no objects found
+                print("none")
+                self.last_velocity = None
+                self.object_found = False
+                self.empty_scans += 1
+                if self.empty_scans > 5:
+                    print("no objects")
+                    #stop car
+                    return None
+            elif l == 1:
+                print("only one")
+                self.object_found = True
+                self.empty_scans = 0
+                self.last_obj = object_list[0]
+                return object_list[0]
             else:
-                #print("distance: " + str(abs(distance-(polar[index+1][1]+polar[index+2][1])/2)))
-                if abs(distance-polar[index+1][1]) > threshold:  #make this loop around
-                    #break_list.append(angle+0.5)
-                    break_list.append(polar[index+1][0]-0.5)
-                    break_list.sort()
+                print("multiple")
+                self.object_found = True
+                max_likeness = 0
+                max_index = 0
+                self.empty_scans = 0
+                for index, obj in enumerate(object_list):
+                    likeness = obj.find_likeness()
+                    print("likeness: ",likeness)
+                    if likeness > max_likeness:
+                        max_likeness = likeness
 
-        broken_objects = []
-        for index, angle in enumerate(break_list):
-            if index == len(break_list)-1:
-                temp = ([],[])
-                for a,d in polar:
+                        max_index = index
+                self.last_obj = object_list[max_index]
+                return object_list[max_index]
+        else:
+            object_list = []
+            vel = None
+            last_t = self.last_obj
+            v = self.last_obj.velocity
+            c = self.last_obj.midpoint
+            lc = self.last_obj.last_center
+            tt = self.last_obj.this_time
+            lt = self.last_obj.last_time
+            """do velocity stuff"""
+            if lc:
+                vel = self.update_velocity(self.last_obj)
 
-                    if a > break_list[index] or a < break_list[0]:
-                        lx,ly=self.polar_to_cartesian(a,d)
-
-                        temp[0].append(lx)
-                        temp[1].append(ly)
-                broken_objects.append(temp)
-
+            for num,scan in enumerate(broken_scans):
+                obj = Object(scan, filter_len=4, last_time=tt, threshold_size=250,
+                             rel_velocity=vel, last_center=c, box_len=150,
+                             sample=None, obj_found=True, err_fac=1)
+                if obj.passed:
+                    object_list.append(obj)
+            l = len(object_list)
+            if l == 0:
+                #no objects found
+                print("none")
+                self.last_velocity = None
+                self.object_found = False
+                self.empty_scans += 1
+            elif l == 1:
+                print("only one")
+                self.object_found = True
+                self.empty_scans = 0
+                self.last_obj = object_list[0]
+                return object_list[0]
             else:
-                temp = ([],[])
-                for a,d in polar:
-                    if a > break_list[index] and a < break_list[index+1]:
-                        lx,ly=self.polar_to_cartesian(a,d)
-                        temp[0].append(lx)
-                        temp[1].append(ly)
-                broken_objects.append(temp)
+                print("multiple")
+                self.object_found = True
+                max_likeness = 0
+                max_index = 0
+                self.empty_scans = 0
+                for index, obj in enumerate(object_list):
+                    likeness = obj.find_likeness()
+                    print("likeness: ",likeness)
+                    if likeness > max_likeness:
+                        max_likeness = likeness
 
-        return broken_objects
+                        max_index = index
+                self.last_obj = object_list[max_index]
+                return object_list[max_index]
 
     def update_velocity(self, object):
         delta_t = object.this_time - object.last_time
@@ -355,7 +404,7 @@ class Lidar():
 #to run
 scan1 = l.do_scan(_theta,_r)
 broken = l.break_DCs(scan1,400,200)
-obj = l.find_obj1(broken)
+obj = l.find_obj(broken)
 if obj:
     lines = obj.find_line_lines(line_points)
     lines = obj.filtered_lines(lines)
