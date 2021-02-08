@@ -2,7 +2,7 @@
 
 """
 Unit test for the logging functinanlity
-Last revision: December 27th, 2020
+Last revision: January 9th, 2021 
 """
 
 #hack for including another directory
@@ -54,8 +54,10 @@ def dataloggertest():
 def sysloggertest():
     #Testing sys logger
 
-    sys_log = Sys_logger("log.txt")
-    sys_log.log_error("Testing!")
-
+    sys_log = Sys_logger("smart_asphalt")
+    sys_log.log_error("error")
+    sys_log.log_warning("warning")
+    sys_log.log_info("info")
+    sys_log.log_debug("debug")
 
 sysloggertest()
