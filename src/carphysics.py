@@ -18,9 +18,15 @@ class CarPhysics:
     def calc_position(steering, speed, sample_time):
 
         #This function calculates relative position to the current values
-        #Note that this is RELATIVE
+        #Note that this is RELATIVE and that error will occur if the sample time is too large
+        #As of writing (start of W6), the sample time should be on the order of .25 seconds, or 250 millseconds
 
-        #caclulate radius based on steering angle 
+        #handling case of going straight
+        if(steering == 0):
+            return 0, speed*sample_time
+
+        #caclulate radius based on steering angle
+        steering = math.radians(steering) 
         outer_r = CarPhysics.WHEELBASE / math.sin(steering)  
         inner_r = CarPhysics.WHEELBASE / math.tan(steering)
         #averaging to get center
@@ -31,9 +37,10 @@ class CarPhysics:
         #calculating angular velocity
         w = speed / (center_r)
         #distance traveled along circle
+        #equation theta = theta0 + wt, where theta0 is 0
         theta = w*sample_time
         #caclulate relative position
-        x = center_r*math.cos(theta)
-        y = center_r*math.sin(theta)
+        x = center_r*math.cos(theta) 
+        y = center_r*math.sin(theta)  
 
         return x, y

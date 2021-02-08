@@ -7,7 +7,8 @@ sys.path.append('/home/andrew/school/159/code/smart_asphalt/src/')
 from carphysics import CarPhysics
 
 def main():
-	x, y = CarPhysics.calc_position(90, 50, 2)
+	#sampling time will be chosen based on runtime and experiment
+	x, y = CarPhysics.calc_position(0, 8, .25)
 	print(x, y)
 
 if __name__ == "__main__":
