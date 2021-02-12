@@ -9,6 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import sys
+import timing
+import threading
 
 class tegra_stats:
 
@@ -23,4 +25,17 @@ class tegra_stats:
 	def get_tegra_stats():
 		os.system("/usr/bin/tegrastats --logfile ~/smart_asphalt/logs/rawstats.txt")
 
-tegra_stats.get_tegra_stats()
+	#writes control C to command line
+	@staticmethod
+	def kill_tegra_stats():
+		os.system("\x03")
+
+if __name__ == "__main__":
+	collect = threading.Thread(target = tegra_stats.get_tegra_stats())
+	collect.daemon = True
+	collect.start()
+	collect.join()
+	tegra_stats.kill_tegra_stats()
+
+	while(1):
+		timing.sleep_for(1)
