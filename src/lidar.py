@@ -198,6 +198,7 @@ class Lidar():
         self.empty_scans = 0
         self.last_obj = None
         self.last_velocity = None
+        self.last_line = None
 
     def print_health(self):
         print(self.lidar.health())
@@ -208,6 +209,12 @@ class Lidar():
     def restart(self):
         self.lidar.reset()
         self.lidar.connect()
+
+    def start_lidar(self):
+        self.lidar.connect()
+
+    def stop_lidar(self):
+        self.lidar.reset()
 
     def do_scan(self):
         """
@@ -290,10 +297,37 @@ class Lidar():
 
         return broken_objects
 
-    def scan_break_make_objects(self):
-        scan = self.do_scan()
-        b_scan = self.break_DCs(scan,30)
-        return b_scan
+    def scan_break_objects_lines(self):
+        scan = l.do_scan()
+        broken = l.break_DCs(scan,400,200)
+        obj = l.find_obj(broken)
+        if obj:
+            line_points = obj.find_line_points(15)
+            lines = obj.find_line_lines(line_points)
+            lines = obj.filtered_lines(lines)
+            line = self.find_main_line(lines)
+            return obj, line
+        return None
+
+    def find_main_line(self,lines): #lines angle center length
+        if self.last_line:
+            diffs = [abs(self.last_line-lines[0][0]),abs(self.last_line-lines[0][0]+180),abs(self.last_line-lines[0][0]-180)]
+            min_difference, index = min(diffs),0
+
+            for i,l in enumerate(lines):
+                angle, center, length = l
+                diffs = [abs(self.last_line-angle),abs(self.last_line-angle+180),abs(self.last_line-angle-180)]
+                md = min(diffs)
+                if md < min_difference:
+                    min_difference,index = md, i
+            return lines[i]
+        else:
+            min_angle, index = abs(lines[0][0]),0
+            for i,l in enumerate(lines):
+                angle, center, length = l
+                if abs(angle) < min_angle:
+                    min_angle,index = abs(angle), i
+            return lines[i]
 
     def find_obj(self, broken_scans):
         if not self.object_found:
@@ -398,6 +432,7 @@ class Lidar():
 
     def get_velocity(self, object):
         return object.velocity
+
 
 
 """
