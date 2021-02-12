@@ -162,9 +162,24 @@ class Object:
              line_list.append(self.find_line_data(lines[index-1],lines[index]))
         return line_list
 
+    def colinear(self,lines,threshold_angle):
+        for i,line1 in enumerate(lines):
+            for j,line2 in enumerate(lines):
+                if i != j:
+                    if abs(line1[0]-line2[0]) < threshold_angle:
+                        if line1[2]>line2[2]:
+                            del lines[j]
+                        else:
+                            del lines[i]
+        return lines
+
     def filtered_lines(self,lines):
         threshold = 5
         if len(lines) > 2:
+            colinear = self.colinear(lines,1)
+            if colinear:
+                lines = colinear
+
             filtered = []
             indexes = []
             for index in range(len(lines)):
@@ -183,7 +198,17 @@ class Object:
 
                 for k in indexes:
                     filtered.append(lines[k])
+
+            if len(filtered) > 0:
                 return filtered
+            else:
+                longest = 0
+                index = 0
+                for i, line in enumerate(lines):
+                    if line[2]>longest:
+                        longest = line[2]
+                        index = i
+                return [lines[index]]
         else:
             return lines
 
@@ -302,27 +327,32 @@ class Lidar():
         broken = l.break_DCs(scan,400,200)
         obj = l.find_obj(broken)
         if obj:
-            line_points = obj.find_line_points(15)
+            line_points = obj.find_line_points(25)
             lines = obj.find_line_lines(line_points)
             lines = obj.filtered_lines(lines)
-            line = self.find_main_line(lines)
+            if len(lines) > 1:
+                line = self.find_main_line(lines)
+                self.last_line = line
+            else:
+                line = lines[0]
             return obj, line
         return None
 
     def find_main_line(self,lines): #lines angle center length
         if self.last_line:
-            diffs = [abs(self.last_line-lines[0][0]),abs(self.last_line-lines[0][0]+180),abs(self.last_line-lines[0][0]-180)]
+            diffs = [abs(self.last_line[0]-lines[0][0]),abs(self.last_line[0]-lines[0][0]+180),abs(self.last_line[0]-lines[0][0]-180)]
             min_difference, index = min(diffs),0
 
-            for i,l in enumerate(lines):
+            for i,l in enumerate(lines[1:]):
                 angle, center, length = l
-                diffs = [abs(self.last_line-angle),abs(self.last_line-angle+180),abs(self.last_line-angle-180)]
+                diffs = [abs(self.last_line[0]-angle),abs(self.last_line[0]-angle+180),abs(self.last_line[0]-angle-180)]
                 md = min(diffs)
                 if md < min_difference:
                     min_difference,index = md, i
             return lines[i]
         else:
-            min_angle, index = abs(lines[0][0]),0
+            min_angle = abs(lines[0][0])
+            index = 0
             for i,l in enumerate(lines):
                 angle, center, length = l
                 if abs(angle) < min_angle:
@@ -414,13 +444,13 @@ class Lidar():
                     if likeness > max_likeness:
                         max_likeness = likeness
 
-                        max_index = index
+                        max_index = indexupdate_velocity
                 self.last_obj = object_list[max_index]
                 return object_list[max_index]
 
     def update_velocity(self, object):
         delta_t = object.this_time - object.last_time
-        delta_p = (abs(object.last_center[0]-object.midpoint[0]), abs(object.last_center[1]-object.midpoint[1]))
+        delta_p = (object.midpoint[0]-object.last_center[0], object.midpoint[1]-object.last_center[1])
         delta_v = (delta_p[0]/delta_t, delta_p[1]/delta_t)
         return delta_v
 

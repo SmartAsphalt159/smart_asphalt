@@ -26,11 +26,11 @@ class CarPhysics:
             return 0, speed*sample_time
 
         #caclulate radius based on steering angle
-        steering = math.radians(steering) 
-        outer_r = CarPhysics.WHEELBASE / math.sin(steering)  
+        steering = math.radians(steering)
+        outer_r = CarPhysics.WHEELBASE / math.sin(steering)
         inner_r = CarPhysics.WHEELBASE / math.tan(steering)
         #averaging to get center
-        center_r = (outer_r + inner_r) / 2 
+        center_r = (outer_r + inner_r) / 2
 
         #converting alpha to radians
         #alpha_radians = math.radians(steering)
@@ -40,7 +40,13 @@ class CarPhysics:
         #equation theta = theta0 + wt, where theta0 is 0
         theta = w*sample_time
         #caclulate relative position
-        x = center_r*math.cos(theta) 
-        y = center_r*math.sin(theta)  
+        x = center_r*math.cos(theta)
+        y = center_r*math.sin(theta)
 
         return x, y
+
+    def create_path
+
+    def find_path
+
+    def

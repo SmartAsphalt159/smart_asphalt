@@ -11,7 +11,7 @@ class Controls(object):
     def find_velocity_error(self,mode=0):   #mode 0: lidar // mode 1: encoders over networking
         if mode == 0:
             if self.obj.velocity:
-                v_error = (self.obj.velocity[0]**2+self.obj.velocity[0]**2)**0.5
+                v_error = np.sign(self.obj.velocity[0])*(self.obj.velocity[0]**2+self.obj.velocity[0]**2)**0.5
             else:
                 #
                 v_error = 0
