@@ -7,8 +7,8 @@ Instead, any plots assume contingous samples, meaning the index can be used for 
 """
 
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import os
 import time
 import re
@@ -45,6 +45,7 @@ class tegra_stats:
 		#create dataframe
 		df = pd.DataFrame(columns = ["inst_mw", "avg_mw"])
 		while line:
+			#match regex 
 			mtc = tegra_stats.reg.search(line)
 			if(mtc):
 				raw_match = mtc.group(0)
@@ -58,12 +59,21 @@ class tegra_stats:
 		#return dataframe
 		return df
 
+	@staticmethod
+	def plotGraph(df): 
+		plt.plot(df["inst_mw"])
+		plt.title("Power Consumption Over Time")
+		plt.xlabel("Time (Seconds relative to start of script)")		
+		plt.ylabel("Power (mw)")
+		plt.savefig("oof.png")
+
 def main():
 	proc = tegra_stats.get_tegra_stats()
-	time.sleep(5)
+	time.sleep(60)
 	tegra_stats.kill_tegra_stats(proc)
 	nice = tegra_stats.read_file()
 	print(nice.head())
+	tegra_stats.plotGraph(nice)
 
 if __name__ == "__main__":
 	main()
