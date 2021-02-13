@@ -228,7 +228,7 @@ class Lidar():
     def restart(self):
         self.lidar.reset()
         self.lidar.connect()
-
+        self.iterator = self.lidar.iter_measurments(540)
 
     def do_scan(self):
         """
@@ -241,6 +241,8 @@ class Lidar():
         start = 360
         last = -1
         for new_scan, quality, angle, distance in self.iterator:
+            if quality == 0 and angle == 0 and distance == 0:
+                continue
             print(f"quality: {quality} angle: {angle} distance: {distance}")
             print(f"last: {last} start: {start}")
             if last == -1:
@@ -258,6 +260,7 @@ class Lidar():
 
             last = angle
 
+        #self.lidar.stop()
         return scan
 
     def polar_to_cartesian(angle,distance):
