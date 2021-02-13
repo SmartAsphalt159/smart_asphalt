@@ -226,7 +226,7 @@ class Lidar():
         self.last_line = None
 
     def restart(self):
-        self.lidar.reset()
+        self.lidar.stop()
         self.lidar.connect()
         self.iterator = self.lidar.iter_measurments(540)
 
@@ -240,7 +240,9 @@ class Lidar():
         scan=[]
         start = 360
         last = -1
+        count = 0
         for new_scan, quality, angle, distance in self.iterator:
+            count += 1
             if quality == 0 and angle == 0 and distance == 0:
                 continue
             print(f"quality: {quality} angle: {angle} distance: {distance}")
@@ -252,7 +254,7 @@ class Lidar():
                     scan.append((angle,distance))
                 continue
 
-            if last < start and angle > start:
+            if last < start and angle > start and count > 20:
                 break
 
             if quality > 1 and distance > 1:
