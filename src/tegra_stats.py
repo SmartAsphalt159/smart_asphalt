@@ -11,10 +11,12 @@ import os
 import sys
 import timing
 import threading
+import subprocess
 
 class tegra_stats:
 
 	orig_stdout = sys.stdout
+	timeout 
 
 	@staticmethod
 	def init_stdout_to_file():
@@ -23,19 +25,29 @@ class tegra_stats:
 	#read all tegra stats
 	@staticmethod
 	def get_tegra_stats():
-		os.system("/usr/bin/tegrastats --logfile ~/smart_asphalt/logs/rawstats.txt")
+		t_stats = subprocess.Popen(["exec " + "/usr/bin/tegrastats --logfile ~/smart_asphalt/logs/rawstats.txt"], shell=True)
+		return t_stats
 
-	#writes control C to command line
+	#kill process
 	@staticmethod
-	def kill_tegra_stats():
-		os.system("\x03")
+	def kill_tegra_stats(t_stats):
+		t_stats.kill()
+
+	@staticmethod
+	def read_file():
+		#open text file
+		f = open("../logs/rawstats.txt", 'r')
+		lines = f.readlines()
+		#create dataframe
+		for l in lines:
+			#regex command 
+
+		#return dataframe
+
+def main():
+	proc = tegra_stats.get_tegra_stats()
+	timing.sleep_for(5)
+	tegra_stats.kill_tegra_stats(proc)
 
 if __name__ == "__main__":
-	collect = threading.Thread(target = tegra_stats.get_tegra_stats())
-	collect.daemon = True
-	collect.start()
-	collect.join()
-	tegra_stats.kill_tegra_stats()
-
-	while(1):
-		timing.sleep_for(1)
+	main()
