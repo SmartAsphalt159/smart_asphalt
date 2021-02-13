@@ -225,21 +225,10 @@ class Lidar():
         self.last_velocity = None
         self.last_line = None
 
-    def print_health(self):
-        print(self.lidar.health())
-
-    def print_info(self):
-        print(self.lidar.info())
-
     def restart(self):
         self.lidar.reset()
         self.lidar.connect()
 
-    def start_lidar(self):
-        self.lidar.connect()
-
-    def stop_lidar(self):
-        self.lidar.reset()
 
     def do_scan(self):
         """
@@ -248,6 +237,7 @@ class Lidar():
         the data that it measured during its full 360 deg scan
         !!!Needs testing!!!
         """
+        scan=[]
         start = 360
         last = -1
         for new_scan, quality, angle, distance in self.iterator:
