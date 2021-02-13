@@ -241,6 +241,8 @@ class Lidar():
         start = 360
         last = -1
         for new_scan, quality, angle, distance in self.iterator:
+            print(f"quality: {quality} angle: {angle} distance: {distance}")
+            print(f"last: {last} start: {start}")
             if last == -1:
                 start = angle
                 last = angle+0.5
