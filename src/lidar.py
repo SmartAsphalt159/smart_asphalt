@@ -1,6 +1,6 @@
 #/usr/bin/python3
 from time import time
-from math import sqrt, abs, cos, sin, pi, floor, tan, atan
+from math import sqrt, cos, sin, pi, floor, tan, atan
 from rplidar import RPLidar
 import numpy as np
 
