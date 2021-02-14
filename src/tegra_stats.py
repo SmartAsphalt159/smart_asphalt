@@ -1,7 +1,7 @@
 #!/user/bin/python3 
 
 """ 
-Script for monitoring the values of a script and logging them for viewing later 
+Script for monitoring the values of tegra_stats and logging them for viewing later 
 The output from tegrastats is synchronous (~ every 1s), so the absolute timestamps are not taken. 
 Instead, any plots assume contingous samples, meaning the index can be used for graphing"
 """
@@ -19,7 +19,6 @@ class tegra_stats:
 
 	reg = re.compile("POM_5V_IN \d+\/\d+")
 	orig_stdout = sys.stdout
-	timeout = 0 
 
 	@staticmethod
 	def init_stdout_to_file():
@@ -51,8 +50,8 @@ class tegra_stats:
 				raw_match = mtc.group(0)
 				nums = raw_match.split()[1]
 				power = nums.split('/')
-				df.loc[count] = [power[0], power[1]]
-			#else, raise exception
+				df.loc[count] = [float(power[0]), float(power[1])]
+			
 			line = str(f.readline())
 			count += 1
 
@@ -65,15 +64,23 @@ class tegra_stats:
 		plt.title("Power Consumption Over Time")
 		plt.xlabel("Time (Seconds relative to start of script)")		
 		plt.ylabel("Power (mw)")
-		plt.savefig("oof.png")
+		plt.savefig("mw_plot.png")
 
 def main():
+	#get command line args
+	if(len(sys.argv) != 2):
+		print("Input format was not correct")
+		print("The correct input is python3 tegra_stas.py <timeout>")
+		exit()
+
+	acq_time = int(sys.argv[1])
+	#start collection process
 	proc = tegra_stats.get_tegra_stats()
-	time.sleep(60)
+	time.sleep(acq_time)
 	tegra_stats.kill_tegra_stats(proc)
-	nice = tegra_stats.read_file()
-	print(nice.head())
-	tegra_stats.plotGraph(nice)
+	#extract data and plot
+	df = tegra_stats.read_file()
+	tegra_stats.plotGraph(df)
 
 if __name__ == "__main__":
 	main()
