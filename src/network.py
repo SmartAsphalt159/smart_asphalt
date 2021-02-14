@@ -39,7 +39,7 @@ def bind_skt(port, skt_type):
     return skt
 
 def printPkt(pkt, address):
-    print(f"{address}, {pkt.braking}, {pkt.steering}, {pkt.speed}, {pkt.timestamp}\n")
+    print(f"{address}, {pkt.throttle}, {pkt.steering}, {pkt.speed}, {pkt.timestamp}\n")
 
 class send_network():
 
@@ -48,8 +48,8 @@ class send_network():
             self.send_port = bind_port(port, 0)
             self.sndskt = bind_skt(self.send_port, 0)
 
-    def broadcast_data(self, braking, steering, speed, timestamp):
-            self.sndskt.send((Packet(braking, steering, speed, 
+    def broadcast_data(self, throttle, steering, speed, timestamp):
+            self.sndskt.send((Packet(throttle, steering, speed, 
                     timestamp).build_str()).encode())                
 
 class recv_network():
