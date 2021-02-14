@@ -1,4 +1,4 @@
-#/usr/bin/python3
+#!/usr/bin/python3
 
 import Jetson.GPIO as GPIO
 import time
@@ -22,7 +22,15 @@ class GPIO_Interaction():
         self.motor_pwm.stop()
         GPIO.cleanup()
 
-    def format(self, val): #-10 => 8.5 10=>5.5
+    def servo_format(self, val): #-10 => 8.5 10=>5.5
+        if val < -10:
+            return 8.5
+        elif val > 10:
+            return 5.5
+        else:
+            return val*3/20 + 7
+
+    def motor_format(self, val): #-10 => 8.5 10=>5.5
         if val < -10:
             return 8.5
         elif val > 10:
@@ -31,14 +39,14 @@ class GPIO_Interaction():
             return val*3/20 + 7
 
     def set_servo_pwm(self, value):     #-10->10
-        self.servo_pwm.ChangeDutyCycle(self.format(float(value)))
+        self.servo_pwm.ChangeDutyCycle(self.servo_format(float(value)))
 
     def set_motor_pwm(self, value):     #-10->10
-        self.motor_pwm.ChangeDutyCycle(self.format(float(value)))
+        self.motor_pwm.ChangeDutyCycle(self.motor_format(float(value)))
 
 
 class Encoder():
-    def __init__(self, channel, mag_num=2, tire_r=0.035):
+    def __init__(self, channel, mag_num=2, tire_r=35):
         self.mag_num = mag_num
         self.channel = channel
         self.r = tire_r
