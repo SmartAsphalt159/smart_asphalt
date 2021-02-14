@@ -83,7 +83,7 @@ class network_metrics_collection():
             except TypeError:
                 raise TypeError("Error in run_network_test: Typing Issue in Parameters")
             sleep(init_delay)
-            for data in test_data: 
+            for data in test_data: # Generate Test Case
                 self.sender_node.broadcast_data(data['braking'], data['steering'], data['speed'], data['timestamp'])
                 file.write('data' + str(data) + ' ' + str(data['braking']) + str(data['steering']) + str(data['speed']) + str(data['timestamp']) + '\n')
                 sleep(1)
@@ -99,12 +99,13 @@ class network_metrics_collection():
                     print("Error in run_network_test: File Already Exists!")
                 except TypeError:
                     raise TypeError("Error in run_network_test: Typing Issue in Parameters")
-                print(type(recv_data), recv_data)
-                #file.write('packet recvd: ' + str(elapsed_time) +' '+ str(recv_packet))
+                print('Recv: ' + str(type(recv_data)), str(recv_data))
+                recv_packet, elapsed_time = recv_data
+                file.write('packet recvd: ' + str(elapsed_time) +' '+ str(recv_packet))
                 file.close()
         else:
             print("Arguement for 'mode' is Invalid: please use 's' or 'r'!")
 
 if __name__ == '__main__':
     nmc = network_metrics_collection()
-    nmc.run_network_test(1, 5, 'r')
+    nmc.run_network_test(1, 0, 'r')

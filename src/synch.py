@@ -1,8 +1,10 @@
+#!/usr/bin/python3
 """
 Synchronization file for smart aspahlt's platooning code
 Last revision: January 21st, 2020
 """
 
+import lidar
 import threading
 import timing
 import network as net
@@ -156,6 +158,55 @@ class encoder_consumer(queue_skeleton):
                 try:
                     val = self.dequeue()
                     self.enqueue(val)
+                except:
+                    self.logger.log_error("Could not deque encoder data")
+            #timeout becasue there is no data in the queue, will be respawned later
+            else:
+                return 
+              
+
+class lidar_producer(queue_skeleton, Lidar):
+
+    """Constructor"""
+    def __init__(self, out_que, lock, channel, logger, timeout):
+        queue_skeleton.__init__(self, None, out_que, lock, logger, timeout)
+        Lidar.__init__(self) 
+        self.running = True
+
+    def halt_thread(self):
+        self.running = False
+
+    #enqueue encoder values 
+    def run(self):
+        while(self.running):
+            try:
+                scan = self.do_scan()
+                self.enqueue(scan)
+            except:
+                self.logger.log_error("Failed to read encoder value")
+
+class lidar_consumer(queue_skeleton, Lidar):
+
+    """Constructor"""
+    def __init__(self, in_que, out_que, lock, logger, thr_timeout):
+        queue_skeleton.__init__(self, in_que, out_que, lock, logger, thr_timeout)
+        self.running = True
+        self.timeout = thr_timeout
+
+    def halt_thread(self):
+        self.running = False
+
+    def run(self):
+        while(self.running):
+
+            #verify that queue isn't empty
+            if(self.inque.check_empty()):
+                timing.sleep_for(self.timeout)
+
+            if(not self.inque.check_empty()):
+                try:
+                    scan = self.dequeue()
+                    #do something with the scan
                 except:
                     self.logger.log_error("Could not deque encoder data")
             #timeout becasue there is no data in the queue, will be respawned later

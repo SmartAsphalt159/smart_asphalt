@@ -50,7 +50,7 @@ def driver():
 	oupt_q = Queue(0)
 
 	pd = network_producer(oupt_q, temp_lock, 2, logger, 3) 
-	cs = network_consumer(oupt_q, merge_q, temp_lock, logger, 3) 
+	cs = network_consumer(oupt_q, merge_q, temp_lock, logger, 5) 
 
 	cs.start()
 	pd.start()
