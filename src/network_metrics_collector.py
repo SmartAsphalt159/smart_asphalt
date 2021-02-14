@@ -1,9 +1,11 @@
 #/usr/bin/python3
 from network import recv_network as rn, send_network as sn
 from uuid import uuid4
-from timing import get_current_time
+from timing import get_current_time, sleep_for
 from time import sleep
 from sys import exc_info
+import os
+from threading import Thread
 
 class network_metrics_collection():
     ''' Collection of methods to test the network and get data on its performance'''
@@ -16,7 +18,11 @@ class network_metrics_collection():
     # file when we run it again. recv#.data and send#.data maybe csv
     # 2. Data Structure: if sending store a copy of unique data we sent or we 
     # use a UUID, if receiving store data in columns.
-    # 3. 
+    #------------------------------------------------------------------------
+    # 3. Measure time sent and time rcved
+    # 4. Threading or multiprocessing to enable listening during operation continuously
+    # 5. Be able to send and recv data and have it recorded
+    # 6. Configure Jetson to run on startup the script and collect the data
 
     def __init__(self, send_port=1, recv_port=2, file_root_name="metrics"):
         ''' Constructor that initializes a connection with another 
@@ -59,6 +65,68 @@ class network_metrics_collection():
             data['timestamp'] = get_current_time()
             test_data.append(data)
         return test_data
+
+    def get_tx_power():
+
+	    val = os.system('iwconfig wlan0 | grep -o \'Tx-Power=[0-9][0-9]\' | grep [0-9][0-9] -o')	
+	    return val
+
+    def set_tx_power(value):
+
+	    os.system(f'sudo iwconfig wlan0 txpower {value}')
+    
+    def run_net_test_sender(self, size, init_delay):
+        '''
+            Sends a series of packets that it stores 
+            in local files so that later the data can verified
+
+            Args: 
+                size - The amount of packets we want to send
+                init_delay - a delay in seconds before we send 
+                            out the first packet
+            Returns:
+                None 
+        '''
+        test_data = self.generate_test_data(size)
+        #file = open(self.send_file_name, 'w')
+        try:
+            file = open(self.send_file_name, 'w')
+        except FileExistsError:
+            print("Error in run_network_test: File Already Exists!")
+        except TypeError:
+            raise TypeError("Error in run_network_test: Typing Issue in Parameters")
+        sleep(init_delay)
+        for data in test_data: # Generate Test Case
+            self.sender_node.broadcast_data(data['braking'], data['steering'], data['speed'], data['timestamp'])
+            file.write('data' + str(data) + ' ' + str(data['braking']) + str(data['steering']) + str(data['speed']) + str(data['timestamp']) + '\n')
+            sleep(1)
+        file.close()
+    
+    def run_net_test_recv(self, time_to_listen):
+        '''
+            Receives a series of packets that it stores 
+            in local files so that later the data can verified
+
+            Args: 
+                time_to_listen - seconds for how long to listen for 1 msg
+            Returns:
+                None 
+        '''
+        recv_data = self.receive_node.listen_data(time_to_listen)
+        if recv_data == -1:
+            print("No Data Received!")
+        else:
+            try:
+                file = open(self.recv_file_name, 'w')
+            except FileExistsError:
+                print("Error in run_network_test: File Already Exists!")
+            except TypeError:
+                raise TypeError("Error in run_network_test: Typing Issue in Parameters")
+            print('Recv: ' + str(type(recv_data)), str(recv_data))
+            recv_packet, elapsed_time = recv_data
+            file.write('packet received: ' + str(elapsed_time) +' '+ str(recv_packet))
+            file.close()
+
 
     def run_network_test(self, size, init_delay, mode='s'):
         '''
@@ -106,6 +174,21 @@ class network_metrics_collection():
         else:
             print("Arguement for 'mode' is Invalid: please use 's' or 'r'!")
 
+    def createSocketedThreads(self):
+        # Create a receiving thread and a sending thread
+        receiver = Thread(target=self.run_net_test_recv)
+        receiver.setDaemon(True)
+        receiver.start()
+
 if __name__ == '__main__':
-    nmc = network_metrics_collection()
-    nmc.run_network_test(1, 0, 'r')
+    network_metrics_collection.set_tx_power(22)
+    power_setting = network_metrics_collection.get_tx_power()   # in dbm
+    nmc = network_metrics_collection(file_root_name="metrics"+str(power_setting)+str(get_current_time()))
+    
+#    while(True):
+#        nmc.run_net_test_recv(3)
+
+#    while(True):
+#        nmc.run_net_test_sender(60)
+#        sleep_for(2)
+    
