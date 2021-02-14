@@ -4,6 +4,8 @@
 Script for monitoring the values of tegra_stats and logging them for viewing later 
 The output from tegrastats is synchronous (~ every 1s), so the absolute timestamps are not taken. 
 Instead, any plots assume contingous samples, meaning the index can be used for graphing"
+
+To use this script, you will need to have a smart_asphalt/log directory, the script will place a raw data file in it
 """
 
 import pandas as pd
