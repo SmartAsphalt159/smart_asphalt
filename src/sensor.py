@@ -51,16 +51,23 @@ class Encoder():
         self.channel = channel
         self.r = tire_r
         self.tally = 0
+        self.speed = 0
+        self.speed_read = True
         self.last_time = time.time()
         GPIO.add_event_detect(self.channel, GPIO.BOTH,callback=self.on_edge)
 
     def on_edge(self):
         self.tally += 1
 
-    def get_speed(self):
+    def sample_speed(self):
         now = time.time()
         rps = self.tally/(2*self.mag_num*(self.last_time-now))
         speed = 2*3.1415*rps*self.r
         self.tally = 0
         self.last_time = now
-        return speed
+        self.speed = speed
+        self.speed_read = False
+
+    def get_speed(self):
+        self.speed_read = True
+        return self.speed

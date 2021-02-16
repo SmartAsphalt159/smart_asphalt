@@ -218,19 +218,21 @@ class Lidar():
         self.lidar.connect()
         self.time_last = 0
         self.last_measurement = None
-        self.iterator = self.lidar.iter_measurments(540)
+        self.iterator = self.lidar.iter_measurments(800)
         self.object_found = False
         self.empty_scans = 0
         self.last_obj = None
         self.last_velocity = None
         self.last_line = None
+        self.new_scan = None
+        self.scan_read = True
 
     def restart(self):
         self.lidar.stop()
         self.lidar.connect()
-        self.iterator = self.lidar.iter_measurments(540)
+        self.iterator = self.lidar.iter_measurments(800)
 
-    def do_scan(self):
+    def start_scan(self):
         """
         This depends on the buffer overflowing and starting at a random Angle
         in the buffer. It iterates until it passes its starting point and returns
@@ -255,15 +257,24 @@ class Lidar():
                 continue
 
             if last < start and angle > start and count > 20:
-                break
+                self.new_scan = scan
+                self.scan_read = False
+                scan = []
+                start = 360
+                last = -1
+                count = 0
+                continue
+
 
             if quality > 1 and distance > 1:
                 scan.append((angle,distance))
 
             last = angle
 
-        #self.lidar.stop()
-        return scan
+    def get_scan(self):
+        self.scan_read = True
+        return self.new_scan
+
 
     def polar_to_cartesian(angle,distance):
         tx_ = np.cos((float(angle)*np.pi/180))*float(distance)
