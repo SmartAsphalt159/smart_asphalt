@@ -16,27 +16,29 @@ class GPIO_Interaction():
         GPIO.setup((self.servo_ch, self.motor_ch),GPIO.OUT)
         self.servo_pwm = GPIO.PWM(self.servo_ch, 50)
         self.motor_pwm = GPIO.PWM(self.motor_ch, 50)
+        self.servo_pwm.start(self.servo_format(0))
+        self.motor_pwm.start(self.motor_format(0))
 
     def shut_down(self):
         self.servo_pwm.stop()
         self.motor_pwm.stop()
         GPIO.cleanup()
 
-    def servo_format(self, val): #-10 => 8.5 10=>5.5
+    def servo_format(self, val): #-10 => 9/R 10=>5.5/L
         if val < -10:
-            return 8.5
+            return 9
         elif val > 10:
-            return 5.5
+            return 6
         else:
-            return val*3/20 + 7
+            return val*3/20 + 7.5
 
-    def motor_format(self, val): #-10 => 8.5 10=>5.5
+    def motor_format(self, val): #-10 => 8.5 10=>6
         if val < -10:
-            return 8.5
+            return 9
         elif val > 10:
-            return 5.5
+            return 6
         else:
-            return val*3/20 + 7
+            return val*3/20 + 7.5
 
     def set_servo_pwm(self, value):     #-10->10
         self.servo_pwm.ChangeDutyCycle(self.servo_format(float(value)))
