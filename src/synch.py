@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 Synchronization file for smart aspahlt's platooning code
-Last revision: January 21st, 2020
+Last revision: Feb 17th, 2020
 """
 
 import threading

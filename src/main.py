@@ -1,75 +1,68 @@
-#/usr/bin/python3
+#!/usr/bin/python3
 
 """
 Main file for smart aspahlt's platooning code
-Last revision: December 26th, 2020
+Last revision: Feburary 17th, 2020
 """
 
-import socket
 import sys
-import time
 import threading
-import network
-from logger import Logger
-from synch import inter_thread_queue
+from queue import Queue
+from logger import Sys_logger
+from synch import (network_producer, network_consumer, encoder_producer, encoder_consumer,
+    lidar_producer, lidar_consumer)
 
 def main():
+
+    #INIT LOGGER
+    log = Sys_logger("Application")
+
+    #INIT QUEUES (not length cap)
+    net_q = Queue(0)
+    encoder_q = Queue(0)
+    lidar_q = Queue(0)
+
+    #INIT LOCKS
+    net_lock = threading.Lock()
+    enc_lock = threading.Lock()
+    lid_lock = threading.Lock()
+
+    #NETWORKING VARS
+    recvport = 6201
+    sendport = 6202
+    timeout = 2 #seconds
+    net_thread_timeout = 5
+
+    #ENCODER VARS
+    #TODO: update to true value
+    enc_channel = 7
+    enc_timeout = 2
+    sample_wait = 1
+    enc_thread_timeout = 5
+
+    #LIDAR VARS
+    #TODO: update to true value
+    lid_channel = 6
+    lid_timeout = 10
+    lid_thread_timeout = 5
+
+    #INIT PRODCUER CONSUMERS
+
+    #Network
+    network_producer(net_q, net_lock, recvport, log, timeout)
+    network_consumer(net_q, None, net_lock, log, net_thread_timeout)
     
-    ### INIT NETWORK ###
+    #Encoder
+    encoder_producer(encoder_q, enc_lock, enc_channel, log, enc_timeout, sample_wait)
+    encoder_consumer(encoder_q, None, enc_lock, log, enc_thread_timeout)
 
-    #get port numbers 
-    if(len(sys.argv) != 3):                                        #checking argument validity 
-        print("Incorrect number of arguments")
-        print("Must specify index for sending and receiving port")
-        sys.exit()
+    #Lidar
+    lidar_producer(lidar_q, lid_lock, lid_channel, log, lid_timeout)
+    lidar_consumer(lidar_q, None, lid_lock, log, lid_thread_timeout)
 
-    #init sockets
-    recskt, sndskt = network.net_init(sys.argv[1], sys.argv[2])
-
-    #create threads for broadcasting and listening 
-    list_thread = threading.Thread(target=network.listen_data, args=([recskt]))
-    send_thread = threading.Thread(target=network.broadcast_data, args=([sndskt]))
-
-    #start threads
-    send_thread.start()
-    list_thread.start()
-
-    ### NETWORK INIT COMPLETE ### 
-
-    ### THREAD COMMUNICATIONS INIT  ### 
-    """initailize thread communication queue with infinite queue length and binary semaphore """
-    #TODO: Decide whether lidar needs a separate queue due to bandwidth + speed 
-    #network and controls queue
-    net_cont_synch = inter_thread_queue(0, 1) 
-
-    #local sensors and control queue
-    sensor_cont_synch = inter_thread_queue(0, 1) 
-
-    ### THREAD COMMUNUCATIONS INIT COMPLETE ### 
-
-    ### DATA LOGGING INIT ### 
-
-    net = Logger("network")
-    lidar = Logger("lidar")
-    net_data = None
-    lidar_data = None
-    
-    ### DATA LOGGING INIT COMPLETE ###
-
-    ### INIT CONTROLS ### TODO Cayman / Adrian 
-    ### INIT CONTROLS COMPLETE ###
-
-    ### INIT SENSORS ### TODO Cayman / Andrew 
-    ### INIT SENSORS COMPLETE ###
-
-    ### RUNTIME COMPONENT ###
-    while(1):
-
-
-        #update dataframes with data
-        net.update_df(net_data)
-        lidar.update_df(lidar_data)
-
+    #infinite loop
+    #while(1):
+        #Call control system 
 
 if __name__ == "__main__":
     main()
