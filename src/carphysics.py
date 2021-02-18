@@ -1,8 +1,15 @@
 #!/usr/bin/python3
 
 import math
+import numpy as np
+import time
 
-class CarPhysics:
+class CarPhysics():
+    def __init__(self):
+        self.past_obj_pos = np.array([])
+        self.delta_obj_pos = []
+        self.last_time = time.time()
+        self.last_steering = 0
 
     """Calculations are based only on wheelbase, steering angle, current velocity, and the sample time"""
 
@@ -13,7 +20,7 @@ class CarPhysics:
 
     """ Estimate relative position based on current vehicle state """
     #Input: Steering angle [-90, 90] degrees and speed
-    #Output: Relative position 
+    #Output: Relative position
     @staticmethod
     def calc_position(steering, speed, sample_time):
 
@@ -43,10 +50,39 @@ class CarPhysics:
         x = center_r*math.cos(theta)
         y = center_r*math.sin(theta)
 
-        return x, y
+        return [x, y]
 
-    def create_path
 
-    def find_path
+    def get_past_obj_pos(self):
+        return self.past_obj_pos
 
-    def
+    def find_last_pos(self):
+        now = time.time()
+        sample_time = now-self.last_time
+        #TODO: Get steering
+        #TODO: Get speed
+        steering_avg = (self.last_steering + steering)/2
+        lastself.calc_position(steering_avg, speed, sample_time)
+        self.last_steering = steering
+        self.last_time = now
+        return last_pos
+
+    def get_object_position(self):
+        #TODO: From lidar producer consumer get lastest lidar
+        #np array
+        return object_position
+
+
+
+    def update_path(self):
+        my_last_pos = self.find_last_pos()
+        delta_my_pos = -my_last_pos
+
+        self.past_obj_pos = self.past_obj_pos + delta_my_pos    #transform all past points
+        obj_pos_now = self.get_object_position()
+
+        self.past_obj_pos.append(obj_pos_now)
+        difference = len(self.delta_obj_pos) - self.obj_max_length -1
+
+        if difference > 0:
+            del self.delta_obj_pos[:difference]

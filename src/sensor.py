@@ -33,6 +33,8 @@ class GPIO_Interaction():
             return val*3/20 + 7.5
 
     def motor_format(self, val): #-10 => 8.5 10=>6
+        offset = 0.781
+        val = val+offset
         if val < -10:
             return 9
         elif val > 10:
@@ -62,6 +64,7 @@ class Encoder():
         self.tally += 1
 
     def sample_speed(self):
+        #TODO: Call on regular intervals in producer consumer
         now = time.time()
         rps = self.tally/(2*self.mag_num*(self.last_time-now))
         speed = 2*3.1415*rps*self.r
@@ -71,5 +74,6 @@ class Encoder():
         self.speed_read = False
 
     def get_speed(self):
+        #TODO: Should output from producer consumer
         self.speed_read = True
         return self.speed

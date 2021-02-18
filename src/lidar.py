@@ -5,21 +5,21 @@ from rplidar import RPLidar
 import numpy as np
 
 class Object:
-    def __init__(self, pixels, filter_len, last_time, threshold_size,rel_velocity, last_center, box_len, sample, obj_found,err_fac=1):
+    def __init__(self, pixels, filter_len, last_time, threshold_size,rel_velocity, last_midpoint, box_len, sample, obj_found,err_fac=1):
         self.pixels = pixels
         self.filter_len = filter_len
         self.last_time = last_time
         self.this_time = time()
         self.threshold_size = threshold_size
         self.velocity = rel_velocity
-        self.last_center = last_center
+        self.last_midpoint = last_midpoint
         self.box_len = box_len
         self.err_fac = err_fac
         self.obj_found = obj_found
 
         self.size = None
-        self.midpoint = None
-        self.center = None
+        self.midpoint = None    #found from taking center of box
+        self.center = None      #center of line found
         self.angle = None
         self.correct_object_score = None
         self.last_pixels = None
@@ -75,14 +75,14 @@ class Object:
             d_pos = (self.velocity[0]*d_t,self.velocity[1]*d_t)
             d_pos_mag = sqrt(d_pos[0]**2 + d_pos[1]**2)
             err = self.err_fac*(2*1.41*(self.box_len/2) + 2*d_pos_mag)
-            est_pos = (self.last_center[0] + d_pos[0],self.last_center[1] + d_pos[1])
+            est_pos = (self.last_midpoint[0] + d_pos[0],self.last_midpoint[1] + d_pos[1])
             if abs(est_pos[0]-self.midpoint[0]) < err and abs(est_pos[1]-self.midpoint[1]) < err:
                 return True
             else:
                 return False
         else:
             err = self.err_fac*(2*1.41*(self.box_len/2)*3)
-            est_pos = (self.last_center[0],self.last_center[1])
+            est_pos = (self.last_midpoint[0],self.last_midpoint[1])
             if abs(est_pos[0]-self.midpoint[0]) < err and abs(est_pos[1]-self.midpoint[1]) < err:
                 return True
             else:
@@ -173,6 +173,9 @@ class Object:
                             del lines[i]
         return lines
 
+    def set_center(self,center):
+        self.center = center
+
     def filtered_lines(self,lines):
         threshold = 5
         if len(lines) > 2:
@@ -226,6 +229,7 @@ class Lidar():
         self.last_line = None
         self.new_scan = None
         self.scan_read = True
+        self.end_scan = False
 
     def restart(self):
         self.lidar.stop()
@@ -233,11 +237,10 @@ class Lidar():
         self.iterator = self.lidar.iter_measurments(800)
 
     def start_scan(self):
+        #TODO: Implement into Producer consumer... always running
         """
-        This depends on the buffer overflowing and starting at a random Angle
-        in the buffer. It iterates until it passes its starting point and returns
-        the data that it measured during its full 360 deg scan
-        !!!Needs testing!!!
+        Creates loop that constantly updates a 360 degree slice. To close loop
+        make self.end_scan = True
         """
         scan=[]
         start = 360
@@ -247,8 +250,7 @@ class Lidar():
             count += 1
             if quality == 0 and angle == 0 and distance == 0:
                 continue
-            print(f"quality: {quality} angle: {angle} distance: {distance}")
-            print(f"last: {last} start: {start}")
+
             if last == -1:
                 start = angle
                 last = angle+0.5
@@ -271,7 +273,11 @@ class Lidar():
 
             last = angle
 
+            if self.end_scan:
+                break
+
     def get_scan(self):
+        #TODO: result of scan in producer consumer
         self.scan_read = True
         return self.new_scan
 
@@ -297,12 +303,9 @@ class Lidar():
         for index, (angle, distance) in enumerate(polar):
             if index == len(polar)-1:
                 if abs(distance-polar[0][1]) > threshold:  #make this loop around
-                    #break_list.append(angle+0.5)
                     break_list.append(polar[0][0]-0.5)
             else:
-                #print("distance: " + str(abs(distance-(polar[index+1][1]+polar[index+2][1])/2)))
                 if abs(distance-polar[index+1][1]) > threshold:  #make this loop around
-                    #break_list.append(angle+0.5)
                     break_list.append(polar[index+1][0]-0.5)
                     break_list.sort()
 
@@ -330,8 +333,7 @@ class Lidar():
 
         return broken_objects
 
-    def scan_break_objects_lines(self):
-        scan = l.do_scan()
+    def scan_break_objects_lines(self,scan):
         broken = l.break_DCs(scan,400,200)
         obj = l.find_obj(broken)
         if obj:
@@ -343,10 +345,11 @@ class Lidar():
                 self.last_line = line
             else:
                 line = lines[0]
+            obj.set_center(line[1])
             return obj, line
         return None
 
-    def find_main_line(self,lines): #lines angle center length
+    def find_main_line(self,lines): #line: [angle center length]
         if self.last_line:
             diffs = [abs(self.last_line[0]-lines[0][0]),abs(self.last_line[0]-lines[0][0]+180),abs(self.last_line[0]-lines[0][0]-180)]
             min_difference, index = min(diffs),0
@@ -372,7 +375,7 @@ class Lidar():
             object_list = []
             for num,scan in enumerate(broken_scans):
                 obj = Object(scan, filter_len=4, last_time=None, threshold_size=250,
-                             rel_velocity=None, last_center=None, box_len=150,
+                             rel_velocity=None, last_midpoint=None, box_len=150,
                              sample=None, obj_found=False, err_fac=1)
                 if obj.passed:
                     object_list.append(obj)
@@ -414,7 +417,7 @@ class Lidar():
             last_t = self.last_obj
             v = self.last_obj.velocity
             c = self.last_obj.midpoint
-            lc = self.last_obj.last_center
+            lc = self.last_obj.last_midpoint
             tt = self.last_obj.this_time
             lt = self.last_obj.last_time
             """do velocity stuff"""
@@ -423,7 +426,7 @@ class Lidar():
 
             for num,scan in enumerate(broken_scans):
                 obj = Object(scan, filter_len=4, last_time=tt, threshold_size=250,
-                             rel_velocity=vel, last_center=c, box_len=150,
+                             rel_velocity=vel, last_midpoint=c, box_len=150,
                              sample=None, obj_found=True, err_fac=1)
                 if obj.passed:
                     object_list.append(obj)
@@ -458,7 +461,7 @@ class Lidar():
 
     def update_velocity(self, object):
         delta_t = object.this_time - object.last_time
-        delta_p = (object.midpoint[0]-object.last_center[0], object.midpoint[1]-object.last_center[1])
+        delta_p = (object.midpoint[0]-object.last_midpoint[0], object.midpoint[1]-object.last_midpoint[1])
         delta_v = (delta_p[0]/delta_t, delta_p[1]/delta_t)
         return delta_v
 
