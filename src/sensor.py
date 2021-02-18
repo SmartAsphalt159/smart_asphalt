@@ -16,27 +16,31 @@ class GPIO_Interaction():
         GPIO.setup((self.servo_ch, self.motor_ch),GPIO.OUT)
         self.servo_pwm = GPIO.PWM(self.servo_ch, 50)
         self.motor_pwm = GPIO.PWM(self.motor_ch, 50)
+        self.servo_pwm.start(self.servo_format(0))
+        self.motor_pwm.start(self.motor_format(0))
 
     def shut_down(self):
         self.servo_pwm.stop()
         self.motor_pwm.stop()
         GPIO.cleanup()
 
-    def servo_format(self, val): #-10 => 8.5 10=>5.5
+    def servo_format(self, val): #-10 => 9/R 10=>5.5/L
         if val < -10:
-            return 8.5
+            return 9
         elif val > 10:
-            return 5.5
+            return 6
         else:
-            return val*3/20 + 7
+            return val*3/20 + 7.5
 
-    def motor_format(self, val): #-10 => 8.5 10=>5.5
+    def motor_format(self, val): #-10 => 8.5 10=>6
+        offset = 0.781
+        val = val+offset
         if val < -10:
-            return 8.5
+            return 9
         elif val > 10:
-            return 5.5
+            return 6
         else:
-            return val*3/20 + 7
+            return val*3/20 + 7.5
 
     def set_servo_pwm(self, value):     #-10->10
         self.servo_pwm.ChangeDutyCycle(self.servo_format(float(value)))
@@ -51,16 +55,25 @@ class Encoder():
         self.channel = channel
         self.r = tire_r
         self.tally = 0
+        self.speed = 0
+        self.speed_read = True
         self.last_time = time.time()
         GPIO.add_event_detect(self.channel, GPIO.BOTH,callback=self.on_edge)
 
     def on_edge(self):
         self.tally += 1
 
-    def get_speed(self):
+    def sample_speed(self):
+        #TODO: Call on regular intervals in producer consumer
         now = time.time()
         rps = self.tally/(2*self.mag_num*(self.last_time-now))
         speed = 2*3.1415*rps*self.r
         self.tally = 0
         self.last_time = now
-        return speed
+        self.speed = speed
+        self.speed_read = False
+
+    def get_speed(self):
+        #TODO: Should output from producer consumer
+        self.speed_read = True
+        return self.speed
