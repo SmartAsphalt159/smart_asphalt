@@ -50,7 +50,7 @@ class GPIO_Interaction():
 
 
 class Encoder():
-    def __init__(self, channel, mag_num=2, tire_r=35):
+    def __init__(self, channel, mag_num=2, tire_r=350):
         self.mag_num = mag_num
         self.channel = channel
         self.r = tire_r
