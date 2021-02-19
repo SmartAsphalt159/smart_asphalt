@@ -13,10 +13,10 @@ class CarPhysics():
 
     """Calculations are based only on wheelbase, steering angle, current velocity, and the sample time"""
 
-    S = 16          #distance from center of front wheels
-    R0 = 1.5        #distance from king pin access to the center of the contact patch
-    J = 12          #distance between king pins
-    WHEELBASE = 8   #Wheelbase (center front to center back)
+    S = 150          #distance from center of front wheels
+    R0 = 15        #distance from king pin access to the center of the contact patch
+    J = 120          #distance between king pins
+    WHEELBASE = 165   #Wheelbase (center front to center back)
 
     """ Estimate relative position based on current vehicle state """
     #Input: Steering angle [-90, 90] degrees and speed
@@ -48,9 +48,9 @@ class CarPhysics():
         theta = w*sample_time
         #caclulate relative position
         x = center_r*math.cos(theta)
-        y = center_r*math.sin(theta)
+        y = -center_r*math.sin(theta)
 
-        return [x, y]
+        return [x, y, theta]
 
 
     def get_past_obj_pos(self):
@@ -62,10 +62,12 @@ class CarPhysics():
         #TODO: Get steering
         #TODO: Get speed
         steering_avg = (self.last_steering + steering)/2
-        lastself.calc_position(steering_avg, speed, sample_time)
+        pos_calc = lastself.calc_position(steering_avg, speed, sample_time)
+        last_pos = post_calc[0:1]
+        last_arc = post_calc[2:3]
         self.last_steering = steering
         self.last_time = now
-        return last_pos
+        return last_pos, last
 
     def get_object_position(self):
         #TODO: From lidar producer consumer get lastest lidar
@@ -75,10 +77,14 @@ class CarPhysics():
 
 
     def update_path(self):
+        #move than rotate
         my_last_pos = self.find_last_pos()
-        delta_my_pos = -my_last_pos
+        delta_my_pos = [-my_last_pos[0],my_last_pos[1]]
+        angle = -my_last_pos[2]
+        rotation = np.array([[np.cos(angle), np.sin(angle)],[-np.sin(angle), np.cos(angle)]])
 
         self.past_obj_pos = self.past_obj_pos + delta_my_pos    #transform all past points
+        self.past_obj_pos = np.matmul(self.past_obj_pos,rotation)
         obj_pos_now = self.get_object_position()
 
         self.past_obj_pos.append(obj_pos_now)
