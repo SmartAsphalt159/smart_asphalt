@@ -143,7 +143,7 @@ if __name__ == '__main__':
 #   amount = 5000
 #   i = 0    
 #    while(i<amount):
-#        nmc.run_net_test_recv(0.02)
+#        nmc.run_net_test_recv(0.01)
 #       i=i+1
 #    x = "Execution Complete!, total received: " + str(nmc.total_received)
 #    print(x)
@@ -154,7 +154,7 @@ if __name__ == '__main__':
 #    while(i<amount):
 #        nmc.run_net_test_sender(1, 2)
 #        i = i+1
-#        sleep(0.01)
+#        sleep(0.02)
 #    x = "Execution Complete!, total received: " + str(nmc.total_sent)
 #    print(x)
     
