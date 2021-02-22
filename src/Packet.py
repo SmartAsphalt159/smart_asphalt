@@ -32,7 +32,7 @@ class Packet:
     #output: formatted bytes
     """ builds packet string """
     def build_str(self):
-        delim = '-'
+        delim = '--'
         ret = str(self.braking) + delim + str(self.steering) \
             + delim + str(self.speed) + delim + str(self.timestamp)
         return ret
@@ -41,12 +41,12 @@ class Packet:
     #ouput: error status, pkt obj is updated internally 
     """ breaksdown string and stores in string """
     def breakdown_str(self, fstr):
-        lst = fstr.split("-")
+        lst = fstr.split("--")
         if(len(lst) != 4): #if four items weren't sent, something went wrong 
             return -1 #returns packet indicating error
 
         #set internal variables
-        self.braking = float(lst[0])
+        self.braking = lst[0] # For UUID
         self.steering = float(lst[1])
         self.speed = float(lst[2])
         self.timestamp = float(lst[3])

@@ -24,7 +24,7 @@ class network_metrics_collection():
     # 5. Be able to send and recv data and have it recorded
     # 6. Configure Jetson to run on startup the script and collect the data
 
-    def __init__(self, send_port=1, recv_port=2, file_root_name="metrics"):
+    def __init__(self, send_port=1, recv_port=1, file_root_name="metrics"):
         ''' Constructor that initializes a connection with another 
             device in Ad Hoc Network and needed files for metrics
             collecton.
@@ -88,9 +88,8 @@ class network_metrics_collection():
                 None 
         '''
         test_data = self.generate_test_data(size)
-        #file = open(self.send_file_name, 'w')
         try:
-            file = open(self.send_file_name, 'w')
+            file = open(self.send_file_name, 'a')
         except FileExistsError:
             print("Error in run_network_test: File Already Exists!")
         except TypeError:
@@ -117,13 +116,13 @@ class network_metrics_collection():
             print("No Data Received!")
         else:
             try:
-                file = open(self.recv_file_name, 'w')
+                file = open(self.recv_file_name, 'a')
             except FileExistsError:
                 print("Error in run_network_test: File Already Exists!")
             except TypeError:
                 raise TypeError("Error in run_network_test: Typing Issue in Parameters")
-            print('Recv: ' + str(type(recv_data)), str(recv_data))
             recv_packet, elapsed_time = recv_data
+            print('Recv: ' + str(type(recv_data)), str(recv_data))
             file.write('packet received: ' + str(elapsed_time) +' '+ str(recv_packet))
             file.close()
 
@@ -143,9 +142,8 @@ class network_metrics_collection():
         '''      
         if (mode == 's'):
             test_data = self.generate_test_data(size)
-            #file = open(self.send_file_name, 'w')
             try:
-                file = open(self.send_file_name, 'w')
+                file = open(self.send_file_name, 'a')
             except FileExistsError:
                 print("Error in run_network_test: File Already Exists!")
             except TypeError:
@@ -162,7 +160,7 @@ class network_metrics_collection():
                 print("No Data Received!")
             else:
                 try:
-                    file = open(self.recv_file_name, 'w')
+                    file = open(self.recv_file_name, 'a')
                 except FileExistsError:
                     print("Error in run_network_test: File Already Exists!")
                 except TypeError:
@@ -185,8 +183,12 @@ if __name__ == '__main__':
     power_setting = network_metrics_collection.get_tx_power()   # in dbm
     nmc = network_metrics_collection(file_root_name="metrics"+str(power_setting)+str(get_current_time()))
     
-#    while(True):
+#   amount = 150
+#   i = 0    
+#    while(i<amount):
 #        nmc.run_net_test_recv(3)
+#       i=i+1
+#       print("Execution Complete!")
 
 #    while(True):
 #        nmc.run_net_test_sender(60)

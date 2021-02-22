@@ -31,7 +31,7 @@ def bind_skt(port, skt_type):
     skt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)     #using ipv4 address + UDP packets
     ip = "100.100.1.255" #str(os.system('hostname -I | awk \'{print $1}\''))
     if(skt_type == 0):
-        #  skt.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  #configuring for broadcasting 
+            skt.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  #configuring for broadcasting 
             skt.connect((ip, port))                  #connecting on the braodcast port
     else:
             skt.bind((ip, port))                     #bind socket to broadcast for listening
