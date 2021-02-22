@@ -97,7 +97,7 @@ class network_metrics_collection():
         sleep(init_delay)
         for data in test_data: # Generate Test Case
             self.sender_node.broadcast_data(data['braking'], data['steering'], data['speed'], data['timestamp'])
-            file.write('data' + str(data) + ' ' + str(data['braking']) + str(data['steering']) + str(data['speed']) + str(data['timestamp']) + '\n')
+            file.write('data id: ' + str(data['braking']) + 'data msg sent: ' + str(data['braking']) + ' ' + str(data['steering']) + str(data['speed']) + str(data['timestamp']) + '\n')
             sleep(1)
         file.close()
     
@@ -190,7 +190,11 @@ if __name__ == '__main__':
 #       i=i+1
 #       print("Execution Complete!")
 
-#    while(True):
-#        nmc.run_net_test_sender(60)
-#        sleep_for(2)
+#   amount = 100
+#   i = 0
+#   sleep_for(30)
+#    while(i<amount):
+#        nmc.run_net_test_sender(1, 2)
+#        i = i+1
+#    print("Program has Finished")
     
