@@ -45,6 +45,8 @@ class network_metrics_collection():
             print("Unable to create receive_node", exc_info()[0])
         self.recv_file_name = file_root_name + "recv.data"
         self.send_file_name = file_root_name + "send.data"
+        self.total_received = 0
+        self.total_sent = 0
 
     def generate_test_data(self, len):
         ''' 
@@ -97,6 +99,7 @@ class network_metrics_collection():
         sleep(init_delay)
         for data in test_data: # Generate Test Case
             self.sender_node.broadcast_data(data['braking'], data['steering'], data['speed'], data['timestamp'])
+            self.total_sent += 1
             file.write('data id: ' + str(data['braking']) + 'data msg sent: ' + str(data['braking']) + ' ' + str(data['steering']) + str(data['speed']) + str(data['timestamp']) + '\n')
             sleep(1)
         file.close()
@@ -123,54 +126,9 @@ class network_metrics_collection():
                 raise TypeError("Error in run_network_test: Typing Issue in Parameters")
             recv_packet, elapsed_time = recv_data
             print('Recv: ' + str(type(recv_data)), str(recv_data))
+            self.total_received += 1
             file.write('packet received: ' + str(elapsed_time) +' '+ str(recv_packet))
             file.close()
-
-
-    def run_network_test(self, size, init_delay, mode='s'):
-        '''
-            Sends or Receives a series of packets that it stores 
-            in local files so that later the data can verified
-
-            Args: 
-                size - The amount of packets we want to send
-                init_delay - a delay in seconds before we send 
-                            out the first packet
-                mode - whether we are sending 's' or receiving 'r'
-            Returns:
-                None 
-        '''      
-        if (mode == 's'):
-            test_data = self.generate_test_data(size)
-            try:
-                file = open(self.send_file_name, 'a')
-            except FileExistsError:
-                print("Error in run_network_test: File Already Exists!")
-            except TypeError:
-                raise TypeError("Error in run_network_test: Typing Issue in Parameters")
-            sleep(init_delay)
-            for data in test_data: # Generate Test Case
-                self.sender_node.broadcast_data(data['braking'], data['steering'], data['speed'], data['timestamp'])
-                file.write('data' + str(data) + ' ' + str(data['braking']) + str(data['steering']) + str(data['speed']) + str(data['timestamp']) + '\n')
-                sleep(1)
-            file.close()
-        elif(mode == 'r'):
-            recv_data = self.receive_node.listen_data(120)
-            if recv_data == -1:
-                print("No Data Received!")
-            else:
-                try:
-                    file = open(self.recv_file_name, 'a')
-                except FileExistsError:
-                    print("Error in run_network_test: File Already Exists!")
-                except TypeError:
-                    raise TypeError("Error in run_network_test: Typing Issue in Parameters")
-                print('Recv: ' + str(type(recv_data)), str(recv_data))
-                recv_packet, elapsed_time = recv_data
-                file.write('packet recvd: ' + str(elapsed_time) +' '+ str(recv_packet))
-                file.close()
-        else:
-            print("Arguement for 'mode' is Invalid: please use 's' or 'r'!")
 
     def createSocketedThreads(self):
         # Create a receiving thread and a sending thread
@@ -188,7 +146,8 @@ if __name__ == '__main__':
 #    while(i<amount):
 #        nmc.run_net_test_recv(3)
 #       i=i+1
-#       print("Execution Complete!")
+#    x = "Execution Complete!, total received: " + str(nmc.total_received)
+#    print(x)
 
 #   amount = 100
 #   i = 0
@@ -196,5 +155,6 @@ if __name__ == '__main__':
 #    while(i<amount):
 #        nmc.run_net_test_sender(1, 2)
 #        i = i+1
-#    print("Program has Finished")
+#    x = "Execution Complete!, total received: " + str(nmc.total_sent)
+#    print(x)
     
