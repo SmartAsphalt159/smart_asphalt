@@ -101,7 +101,6 @@ class network_metrics_collection():
             self.sender_node.broadcast_data(data['braking'], data['steering'], data['speed'], data['timestamp'])
             self.total_sent += 1
             file.write('data id: ' + str(data['braking']) + 'data msg sent: ' + str(data['braking']) + ' ' + str(data['steering']) + str(data['speed']) + str(data['timestamp']) + '\n')
-            sleep(1)
         file.close()
     
     def run_net_test_recv(self, time_to_listen):
@@ -141,20 +140,21 @@ if __name__ == '__main__':
     power_setting = network_metrics_collection.get_tx_power()   # in dbm
     nmc = network_metrics_collection(file_root_name="metrics"+str(power_setting)+str(get_current_time()))
     
-#   amount = 150
+#   amount = 5000
 #   i = 0    
 #    while(i<amount):
-#        nmc.run_net_test_recv(3)
+#        nmc.run_net_test_recv(0.02)
 #       i=i+1
 #    x = "Execution Complete!, total received: " + str(nmc.total_received)
 #    print(x)
 
 #   amount = 100
 #   i = 0
-#   sleep_for(30)
+#   sleep_for(15)
 #    while(i<amount):
 #        nmc.run_net_test_sender(1, 2)
 #        i = i+1
+#        sleep(0.01)
 #    x = "Execution Complete!, total received: " + str(nmc.total_sent)
 #    print(x)
     
