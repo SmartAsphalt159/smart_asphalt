@@ -155,7 +155,7 @@ class Dumb_Networking_Controls(Controls):
     """
 
 class Lidar_Controls(Controls):
-    def __init__(self, vp, vi, vd, vk, ref=0, sp, si, sd, lidar, gpio, encoder):
+    def __init__(self, vp, vi, vd, vk, sp, si, sd, lidar, gpio, encoder, ref=0):
         super(Lidar_Controls, self).__init__(lidar, gpio, encoder)    #runs init of superclass
 
         self.velocity_P = vp

@@ -14,17 +14,19 @@ from queue import Queue
 from logger import Sys_logger
 from synch import (network_producer, network_consumer, encoder_producer, encoder_consumer,
     lidar_producer, lidar_consumer)
+from controls import *
+from lidar import Lidar
 
 def main():
 
     #Dumb, smart, and lidar
-    #add arugments 
+    #add arugments
     if(len(sys.argv) != 2):
         print("Usage is: python3 main <type>")
         print("Optional types: dumb, smart, lidar")
         exit(0)
     else:
-        #type of control 
+        #type of control
         c_type = argv[1]
 
     #INIT LOGGER
@@ -47,6 +49,10 @@ def main():
     net_thread_timeout = 5
     sn = send_network(sendport)
 
+    #GPIO vars
+    motor_ch = 32
+    servo_ch = 33
+
     #ENCODER VARS
     #TODO: update to true value
     enc_channel = 7
@@ -58,12 +64,23 @@ def main():
     lid_timeout = 10
     lid_thread_timeout = 5
 
+    #CONTROL VARS
+    #Velocity constants
+    vp = 1
+    vi = 0
+    vd = 0
+    vk = 1
+    #Steering constants
+    sp = 1
+    si = 0
+    sd = 0
+
     #INIT PRODCUER CONSUMERS
 
     #Network
     network_producer(net_q, net_lock, recvport, log, timeout)
     network_consumer(net_q, None, net_lock, log, net_thread_timeout)
-    
+
     #Encoder
     encoder_producer(encoder_q, enc_lock, enc_channel, log, enc_timeout, sample_wait)
     encoder_consumer(encoder_q, None, enc_lock, log, enc_thread_timeout)
@@ -72,23 +89,41 @@ def main():
     lidar_producer(lidar_q, lid_lock, log, lid_timeout)
     lidar_consumer(lidar_q, None, lid_lock, log, lid_thread_timeout)
 
-    #infinite loop
-    while(1):
+    try:
         #update local objects (done by threads)
 
-        #Call control system 
-        #TODO: Update to a better design pattern, this is pretty rough 
+        #Call control system
+        #TODO: Update to a better design pattern, this is pretty rough
         if(c_type == "dumb"):
             #call dumb contorl system
+            #TODO: Is creating a differnt lidar ok?
+            new_lidar = Lidar(False)
+            gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
+            #TODO: figure out encoder within controls
+            #TODO: Figure out how controls works with networking
+            controller = Dumb_Networking_Controls(new_lidar,gpio)
+
+            while True:
+                controller.control_loop()
         else if(c_type == "smart"):
             #call smart control system
+            #TODO: once it is written
+
         else if(c_type == "lidar"):
             #call lidar control system
+            new_lidar = Lidar()
+            gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
+            controller = Lidar_Controls(vp, vi, vd, vk, so, si, sd, new_lidar, gpio)
+
+            while True:
+                controller.control_loop()
         else:
             log.log_error("Input was not a valid type")
+    except Exception as e:
+        log.log_error("Exitted loop - Exception: ", e)
 
-        #Broadcast after control system 
-        sn.broadcast_data() #TODO: Cayman the local control system vars need to be parameters here
+    #Broadcast after control system
+    sn.broadcast_data() #TODO: Cayman the local control system vars need to be parameters here
 
     #gracefully exit program
     graceful_shutdown(log)

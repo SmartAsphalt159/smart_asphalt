@@ -32,7 +32,7 @@ class queue_skeleton(threading.Thread):
 
         try:
             self.outque.put(data)
-        except: 
+        except:
             self.logger.log_error("Failed to enqueue data")
             self.lock.release()
             return -1
@@ -43,7 +43,7 @@ class queue_skeleton(threading.Thread):
     """ Protected Dequeue """
     def dequeue(self):
         self.lock.acquire()
-        try: 
+        try:
             data = self.inque.get(timeout=self.timeout)
             self.inque.task_done()
         except:
@@ -61,7 +61,7 @@ class queue_skeleton(threading.Thread):
     """ Full wrapper """
     def check_full(self):
         return self.outque.full()
-    
+
 class network_producer(queue_skeleton, recv_network):
 
     """Constructor"""
@@ -77,7 +77,7 @@ class network_producer(queue_skeleton, recv_network):
     def run(self):
         while(self.running):
             try:
-                #Setting timeout of 1 second 
+                #Setting timeout of 1 second
                 temp, _ = self.listen_data(1)
                 if(temp == -1):
                     self.logger.log_error("Socket timeout occured")
@@ -115,21 +115,21 @@ class network_consumer(queue_skeleton):
                     self.logger.log_error("Could not deque packet")
             #timeout becasue there is no data in the queue, will be respawned later
 #            else:
-#                return 
+#                return
 
 class encoder_producer(queue_skeleton, Encoder):
 
     """Constructor"""
     def __init__(self, out_que, lock, channel, logger, timeout, sample_wait):
         queue_skeleton.__init__(self, None, out_que, lock, logger, timeout)
-        Encoder.__init__(self, channel) 
+        Encoder.__init__(self, channel)
         self.running = True
         self.sample_wait = sample_wait
 
     def halt_thread(self):
         self.running = False
 
-    #enqueue encoder values 
+    #enqueue encoder values
     def run(self):
         while(self.running):
             try:
@@ -170,21 +170,21 @@ class encoder_consumer(queue_skeleton):
                     self.logger.log_error("Could not deque encoder data")
             #timeout becasue there is no data in the queue, will be respawned later
             #else:
-            #    return 
-              
+            #    return
+
 
 class lidar_producer(queue_skeleton, Lidar):
 
     """Constructor"""
     def __init__(self, out_que, lock, channel, logger, timeout):
         queue_skeleton.__init__(self, None, out_que, lock, logger, timeout)
-        Lidar.__init__(self) 
+        Lidar.__init__(self, True) 
         self.running = True
 
     def halt_thread(self):
         self.running = False
 
-    #enqueue encoder values 
+    #enqueue encoder values
     def run(self):
         while(self.running):
             try:
@@ -223,4 +223,4 @@ class lidar_consumer(queue_skeleton, Lidar):
                     self.logger.log_error("Could not deque lidar scan")
             #timeout becasue there is no data in the queue, will be respawned later
             #else:
-            #    return 
+            #    return

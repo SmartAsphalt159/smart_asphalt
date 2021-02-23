@@ -216,12 +216,13 @@ class Object:
             return lines
 
 class Lidar():
-    def __init__(self, USB_port='/dev/ttyUSB0'):
-        self.lidar = RPLidar(USB_port)
-        self.lidar.connect()
+    def __init__(self, scanner, USB_port='/dev/ttyUSB0'):
+        if scanner:
+            self.lidar = RPLidar(USB_port)
+            self.lidar.connect()
+            self.iterator = self.lidar.iter_measurments(800)
         self.time_last = 0
         self.last_measurement = None
-        self.iterator = self.lidar.iter_measurments(800)
         self.object_found = False
         self.empty_scans = 0
         self.last_obj = None
@@ -266,7 +267,6 @@ class Lidar():
                 last = -1
                 count = 0
                 continue
-
 
             if quality > 1 and distance > 1:
                 scan.append((angle,distance))
