@@ -1,10 +1,11 @@
 import time
 
 class Controls(object):
-    def __init__(self,lidar,gpio,encoder,carphys):
+    def __init__(self, lidar, gpio, encoder_consumer, carphys, lidar_consumer):
         self.lidar = lidar
         self.gpio = gpio
-        self.encoder = encoder
+        self.encoder_consumer = encoder_consumer
+        self.lidar_consumer = lidar_consumer
         self.carphys = carphys
         self.line = None
         self.obj = None
@@ -27,14 +28,17 @@ class Controls(object):
         d_error = d_ref - self.get_distance()
         return d_error
 
-    def find_steering_error(self):
+    def find_steering_error(self, speed):
         """
         +x is forward
         +y is left
         if s_error > 0 turn left
         if past object list not long enough just use current y position of car.
         """
-        past_obj_pos = carphys.get_past_obj_pos
+        str = self.last_steering
+        vel = speed
+        carphys.update_path(self.lidar.get_position(self.obj),str,vel)
+        past_obj_pos = carphys.get_past_obj_pos()
         if np.min(past_obj_pos[:,0]) < 0:   #takes smallest x value
             return lidar.get_position(obj)[1]
         else:
@@ -69,7 +73,8 @@ class Controls(object):
         return b
 
     def get_lidar_data(self):
-        #TODO: Get scan from produce consumer
+        #TODO: double check
+        scan = self.lidar_consumer.get_scan()
         obj,line = lidar.scan_break_objects_lines(scan)
         self.obj = obj
         self.line = line
@@ -80,7 +85,8 @@ class Controls(object):
         return distance
 
     def get_encoder_velocity(self):
-        #TODO: Switch to producer consumer encoder_velocity = self.encoder.get_speed()
+        #TODO: double check
+        encoder_velocity = self.encoder_consumer.get_speed()
         return encoder_velocity
 
     def get_relative_lidar_velocity(self):
@@ -90,8 +96,8 @@ class Controls(object):
 
 
 class Dumb_Networking_Controls(Controls):
-    def __init__(self, lidar, gpio, encoder, mode=0):
-        super(Dumb_Networking_Controls, self).__init__(lidar, gpio, encoder)    #runs init of superclass
+    def __init__(self, lidar, gpio, carphys, network_consumer, encoder_consumer, lidar_consumer, mode=0):
+        super(Dumb_Networking_Controls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer)    #runs init of superclass
         self.dumb_networking_mode = mode    #mode 0 is chain mode// mode 1 is leader mode
         self.accel_cmd = 0
         self.steering_list = [0]
@@ -104,35 +110,29 @@ class Dumb_Networking_Controls(Controls):
             #in follow the leader mode
             #get networking from lead car
 
-    def control_loop(self):
-        velocity = self.get_encoder_velocity()
+    def control_loop(self, enc_vel):
         self.transmission_delay = self.get_transmission_delay()
 
-        delay = self.initial_distance/velocity + self.transmission_delay
+        delay = self.initial_distance/enc_vel + self.transmission_delay
         delayed_time = time.time-delay
-
-        self.get_newest_accel_cmd()
-        self.get_newest_steering_cmd()
 
         accel_cmd = self.accel_cmd
         steering_cmd = self.get_delayed_steering_cmd(delayed_time)
 
         self.gpio.set_servo_pwm(steering_cmd)
         self.gpio.set_motor_pwm(accel_cmd)
+        return steering_cmd, accel_cmd
 
     def get_transmission_delay(self):
         #need to change this
         transmission_delay = 0.01
         return transmission_delay
 
-    def get_newest_accel_cmd(self):
-        #TODO: Get newest accel command from network producer consumer
-        #change accel_cmd
-        self.accel_cmd = 0 #newest data
+    def get_newest_accel_cmd(self, cmd):
+        self.accel_cmd = cmd #newest data
 
-    def get_newest_steering_cmd(self):
-        #TODO: Get newest steering command from network producer consumer
-        #find newest steering_cmd
+    def get_newest_steering_cmd(self, cmd):
+        timestamp = time.time()
         self.steering_list.append((timestamp,cmd))    #newest data
         if len(self.steering_list) > 50:
             del self.steering_list[0]
@@ -155,8 +155,8 @@ class Dumb_Networking_Controls(Controls):
     """
 
 class Lidar_Controls(Controls):
-    def __init__(self, vp, vi, vd, vk, sp, si, sd, lidar, gpio, encoder, ref=0):
-        super(Lidar_Controls, self).__init__(lidar, gpio, encoder)    #runs init of superclass
+    def __init__(self, vp, vi, vd, vk, sp, si, sd, lidar, gpio, carphys, encoder_consumer, lidar_consumer, ref=0):
+        super(Lidar_Controls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer)    #runs init of superclass
 
         self.velocity_P = vp
         self.velocity_I = vi
@@ -180,12 +180,14 @@ class Lidar_Controls(Controls):
         self.steering_output_clamp = (-10,10)  #clamps output between these two values
         self.steering_output_scaling = 1/100
 
+        self.last_steering = 0
+
         if ref=0:
             self.get_lidar_data()
             self.initial_distance = self.get_distance()
 
-    def control_loop(self):
-        v_error, d_error, s_error = self.get_errors()
+    def control_loop(self, speed):
+        v_error, d_error, s_error = self.get_errors(speed)
 
         velocity_pid_input = d_error * self.velocity_Kp + v_error
         velocity_pid_output = self.velocity_pid_controller(velocity_pid_input)
@@ -196,12 +198,14 @@ class Lidar_Controls(Controls):
         steering_pid_output = self.steering_pid_controller(steering_pid_input)
         steering_cmd = self.convert_pid(steering_pid_output, self.steering_output_scaling, self.steering_output_clamp)
         self.gpio.set_servo_pwm(steering_cmd)
+        self.last_steering = steering_cmd
+        return steering_cmd, accel_cmd
 
 
     def get_errors():
         v_error = self.find_velocity_error()
         d_error = self.find_distance_error()
-        s_error = self.find_steering_error()
+        s_error = self.find_steering_error(speed)
 
         return v_error, d_error, s_error
 

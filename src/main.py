@@ -16,6 +16,7 @@ from synch import (network_producer, network_consumer, encoder_producer, encoder
     lidar_producer, lidar_consumer)
 from controls import *
 from lidar import Lidar
+from carphysics import CarPhysics
 
 def main():
 
@@ -55,7 +56,7 @@ def main():
 
     #ENCODER VARS
     #TODO: update to true value
-    enc_channel = 7
+    enc_channel = 19
     enc_timeout = 2
     sample_wait = 1
     enc_thread_timeout = 5
@@ -63,8 +64,6 @@ def main():
     #LIDAR VARS
     lid_timeout = 10
     lid_thread_timeout = 5
-    #TODO Channel is needed for lidar producer, update to what it is expected to be
-    lidar_channel = 7 #PLACEHOLDER
 
     #CONTROL VARS
     #Velocity constants
@@ -106,18 +105,22 @@ def main():
         #TODO: Update to a better design pattern, this is pretty rough
         if(c_type == "dumb"):
             #call dumb contorl system
-            #TODO: Is creating a differnt lidar ok?
             new_lidar = Lidar(False)
             gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
-            #TODO: figure out encoder within controls
-            #TODO: Figure out how controls works with networking
-            controller = Dumb_Networking_Controls(new_lidar,gpio)
+            carphys = CarPhysics()
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lc)
 
             while True:
-                controller.control_loop()
+                #TODO: double check
+                encoder_speed = controller.get_encoder_velocity()
+                packet = nc.get_packet()
+                controller.get_newest_steering_cmd(packet.steering)
+                controller.get_newest_accel_cmd(packet.throttle)
+                str, accl = controller.control_loop(encoder_speed)
                 #Broadcast after control system
-                sn.broadcast_data() #TODO: Cayman the local control system vars need to be parameters here
+                sn.broadcast_data(accl, str, encoder_speed, time.time())
         #Uncomment when written
+        #TODO: when smart networking is implemented
         #elif(c_type == "smart"):
             #call smart control system
             #TODO: once it is written
@@ -126,15 +129,19 @@ def main():
             #call lidar control system
             new_lidar = Lidar()
             gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
-            controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio)
+            carphys = CarPhysics()
+            controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ec, lc)
 
             while True:
-                controller.control_loop()
+                controller.get_lidar_data()
+                encoder_speed = controller.get_encoder_velocity()
+
+                str, accl = controller.control_loop(encoder_speed)
                 #Broadcast after control system
-                sn.broadcast_data() #TODO: Cayman the local control system vars need to be parameters here
+                sn.broadcast_data(accl, str, encoder_speed, time.time) #TODO: idk if we need this here
         else:
             log.log_error("Input was not a valid type")
-    except Exception as e:      
+    except Exception as e:
         err = "Exitted loop - Exception: " + e
         log.log_error(err)
 

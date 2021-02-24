@@ -56,36 +56,27 @@ class CarPhysics():
     def get_past_obj_pos(self):
         return self.past_obj_pos
 
-    def find_last_pos(self):
+    def find_last_pos(self,steering,speed):
         now = time.time()
         sample_time = now-self.last_time
-        #TODO: Get steering
-        #TODO: Get speed
         steering_avg = (self.last_steering + steering)/2
         pos_calc = lastself.calc_position(steering_avg, speed, sample_time)
         last_pos = post_calc[0:1]
-        last_arc = post_calc[2:3]
+        last_arc = post_calc[2]
         self.last_steering = steering
         self.last_time = now
-        return last_pos, last
+        return last_pos, last_arc
 
-    def get_object_position(self):
-        #TODO: From lidar producer consumer get lastest lidar
-        #np array
-        return object_position
-
-
-
-    def update_path(self):
+    def update_path(self, position, steering, speed):
         #move than rotate
-        my_last_pos = self.find_last_pos()
-        delta_my_pos = [-my_last_pos[0],my_last_pos[1]]
-        angle = -my_last_pos[2]
+        my_last_pos = self.find_last_pos(steering, speed)
+        delta_my_pos = [-my_last_pos[0][0],my_last_pos[0][1]]
+        angle = -my_last_pos[1]
         rotation = np.array([[np.cos(angle), np.sin(angle)],[-np.sin(angle), np.cos(angle)]])
 
         self.past_obj_pos = self.past_obj_pos + delta_my_pos    #transform all past points
         self.past_obj_pos = np.matmul(self.past_obj_pos,rotation)
-        obj_pos_now = self.get_object_position()
+        obj_pos_now = position
 
         self.past_obj_pos.append(obj_pos_now)
         difference = len(self.delta_obj_pos) - self.obj_max_length -1

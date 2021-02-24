@@ -277,7 +277,7 @@ class Lidar():
                 break
 
     def get_scan(self):
-        #TODO: result of scan in producer consumer
+        self.lidar_consumer.get_scan()
         self.scan_read = True
         return self.new_scan
 

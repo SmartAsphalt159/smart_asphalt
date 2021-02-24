@@ -60,13 +60,13 @@ class Encoder():
         self.last_time = time.time()
         GPIO.add_event_detect(self.channel, GPIO.BOTH,callback=self.on_edge)
 
-    def on_edge(self):
+    def on_edge(self,channel):
         self.tally += 1
 
     def sample_speed(self):
         #TODO: Call on regular intervals in producer consumer
         now = time.time()
-        rps = self.tally/(2*self.mag_num*(self.last_time-now))
+        rps = self.tally/(2*self.mag_num*(now-self.last_time))
         speed = 2*3.1415*rps*self.r
         self.tally = 0
         self.last_time = now
