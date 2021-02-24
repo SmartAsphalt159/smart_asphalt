@@ -133,6 +133,9 @@ class encoder_producer(queue_skeleton, Encoder):
     def run(self):
         while(self.running):
             try:
+                #update speed to latest value
+                self.sample_speed()
+                #get latest value
                 speed = self.get_speed()
                 self.enqueue(speed)
             except:
@@ -186,6 +189,8 @@ class lidar_producer(queue_skeleton, Lidar):
 
     #enqueue encoder values
     def run(self):
+        #initiate the scan
+        self.start_scan()
         while(self.running):
             try:
                 scan = self.get_scan()
