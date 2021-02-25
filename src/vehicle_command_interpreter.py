@@ -1,9 +1,7 @@
 from pathlib import Path
 from re import search, match
 
-
 class vehicle_command_interpreter():
-
     _script_dir = Path("../vehicle_command_scripts/")
     pattern_comment = r'^#'
     pattern_throttle = r'^(throttle)(\s\d+(.?\d+)?)'
@@ -40,11 +38,12 @@ class vehicle_command_interpreter():
             else:
                 raise ValueError(f'Unsupported phrase encountered in {file_name}: {line}')
         print(command_list)
-        vehicle_command_interpreter.generate_command_script(command_list)
+        commands = vehicle_command_interpreter.generate_command_script(command_list)
+        exec(commands)
 
     @staticmethod
     def generate_command_script(list_commands):
-        init_code = """import GPIO_Interaction\nimport time\nmotor_ch = 32\nservo_ch = 33\nenc_channel = 19\ngi = GPIO_Interaction(enc_channel, servo_ch, motor_ch)\n"""
+        init_code = """from sensor import GPIO_Interaction\nimport time\nmotor_ch = 32\nservo_ch = 33\nenc_channel = 19\ngi = GPIO_Interaction(enc_channel, servo_ch, motor_ch)\n"""
         for command in list_commands:
             init_code = init_code + command
 
