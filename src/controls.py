@@ -182,7 +182,7 @@ class Lidar_Controls(Controls):
 
         self.last_steering = 0
 
-        if ref=0:
+        if ref==0:
             self.get_lidar_data()
             self.initial_distance = self.get_distance()
 
@@ -216,8 +216,8 @@ class Lidar_Controls(Controls):
         if len(self.velocity_pid_list) > self.velocity_pid_length:
             del self.velocity_pid_list[0]
 
-        pid_val = self.proportional(pid_input, self.velocity_P) +
-                  self.integral(self.velocity_pid_list, self.velocity_I) +
+        pid_val = self.proportional(pid_input, self.velocity_P) + \
+                  self.integral(self.velocity_pid_list, self.velocity_I) + \
                   self.derivative(self.velocity_pid_list, self.velocity_D)
 
         return pid_val
@@ -229,8 +229,8 @@ class Lidar_Controls(Controls):
         if len(self.steering_pid_list) > self.steering_pid_length:
             del self.steering_pid_list[0]
 
-        pid_val = self.proportional(pid_input, self.steering_P) +
-                  self.integral(self.steering_pid_list, self.steering_I) +
+        pid_val = self.proportional(pid_input, self.steering_P) + \
+                  self.integral(self.steering_pid_list, self.steering_I) + \
                   self.derivative(self.steering_pid_list, self.steering_D)
 
         return pid_val
@@ -245,7 +245,7 @@ class Lidar_Controls(Controls):
 
         modifier = self.I
         sum = 0
-    """change taking from wrong side"""
+        """change taking from wrong side"""
         for x,(pid,t) in enumerate(pid_list[:-1]):    #reiman sum of distance between vehicles
             sum += pid * (t - pid_list[x+1][1])   #calculate deltat * pid val
 
@@ -256,9 +256,9 @@ class Lidar_Controls(Controls):
         if not pid_list or len(pid_list)<2:
             return 0
 
-    """change taking from wrong side"""
+        """change taking from wrong side"""
         d_val = (self.pid_list[-1][0]-self.pid_list[-2][0])/(self.pid_list[-1][1]-self.pid_list[-2][1])
-        d_val =* self.D
+        d_val *= self.D
 
         return d_val
 
