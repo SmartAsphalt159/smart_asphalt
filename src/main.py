@@ -44,24 +44,25 @@ def main():
     lid_lock = threading.Lock()
 
     #NETWORKING VARS
-    recvport = 6201
-    sendport = 6202
-    timeout = 2 #seconds
+    recvport = 1
+    sendport = 2
+    timeout = 2  # seconds
     net_thread_timeout = 5
     sn = network.send_network(sendport)
 
-    #GPIO vars
+    # GPIO vars
     motor_ch = 32
     servo_ch = 33
 
-    #ENCODER VARS
-    #TODO: update to true value
+    # ENCODER VARS
+    # TODO: update to true value
     enc_channel = 19
     enc_timeout = 2
     sample_wait = 1
     enc_thread_timeout = 5
 
-    #LIDAR VARS
+    # LIDAR VARS
+    lidar_channel = "/dev/ttyUSB0"
     lid_timeout = 10
     lid_thread_timeout = 5
 
@@ -75,6 +76,8 @@ def main():
     sp = 1
     si = 0
     sd = 0
+
+    gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
 
     #INIT PRODCUER CONSUMERS
 
@@ -106,7 +109,7 @@ def main():
         if(c_type == "dumb"):
             #call dumb contorl system
             new_lidar = Lidar(False)
-            gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
+
             carphys = CarPhysics()
             controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lc)
 
@@ -128,7 +131,6 @@ def main():
         elif(c_type == "lidar"):
             #call lidar control system
             new_lidar = Lidar()
-            gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
             carphys = CarPhysics()
             controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ec, lc)
 
