@@ -8,10 +8,5 @@
 throttle 0.5
 wait 1
 # Turn right
-steer 10
-wait 1
-# Turn while moving
-steer 0
-throttle 0.5
-wait 1
+throttle 0
 # Done

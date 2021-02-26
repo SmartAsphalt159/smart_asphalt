@@ -78,13 +78,13 @@ class network_producer(queue_skeleton, recv_network):
         while(self.running):
             try:
                 #Setting timeout of 1 second
-                temp, _ = self.listen_data(1)
+                temp, _ = self.listen_data(0.1)
                 if(temp == -1):
                     self.logger.log_error("Socket timeout occured")
                 else:
                     self.enqueue(temp)
             except:
-                if(self.outque.check_full()):
+                if(self.check_full()):
                     self.logger.log_error("Network Producer output queue is full")
 
 class network_consumer(queue_skeleton):
@@ -108,7 +108,7 @@ class network_consumer(queue_skeleton):
             #if(self.inque.check_empty()):
             #    timing.sleep_for(self.timeout)
 
-            if(not self.inque.check_empty()):
+            if(not self.check_empty()):
                 try:
                     self.packet = self.dequeue()
                 except:
@@ -166,7 +166,7 @@ class encoder_consumer(queue_skeleton):
             #if(self.inque.check_empty()):
             #    timing.sleep_for(self.timeout)
 
-            if(not self.inque.check_empty()):
+            if(not self.check_empty()):
                 try:
                     self.speed = self.dequeue()
                 except:
@@ -181,7 +181,7 @@ class lidar_producer(queue_skeleton, Lidar):
     """Constructor"""
     def __init__(self, out_que, lock, channel, logger, timeout):
         queue_skeleton.__init__(self, None, out_que, lock, logger, timeout)
-        Lidar.__init__(self, True) 
+        Lidar.__init__(self, True)
         self.running = True
 
     def halt_thread(self):
@@ -220,7 +220,7 @@ class lidar_consumer(queue_skeleton, Lidar):
             #if(self.inque.check_empty()):
             #    timing.sleep_for(self.timeout)
 
-            if(not self.inque.check_empty()):
+            if(not self.check_empty()):
                 try:
                     #set scan to local variable
                     self.scan = self.dequeue()

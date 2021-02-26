@@ -23,12 +23,12 @@ class vehicle_command_interpreter():
             elif search(vehicle_command_interpreter.pattern_throttle, line):
                 list_args = line.split(' ')
                 throttle_setting = list_args[1]
-                command_str = f"""gi.set_motor_pwm({throttle_setting})\n"""
+                command_str = f"""throttle_val={throttle_setting}\ngi.set_motor_pwm({throttle_setting})\nsend_node.broadcast_data(steering_val, throttle_val, 0, 0)\n"""
                 command_list.append(command_str)
             elif search(vehicle_command_interpreter.pattern_steer, line):
                 list_args = line.split(' ')
                 steering = list_args[1]
-                command_str = f"""gi.set_servo_pwm({steering})\n"""
+                command_str = f"""steering_val={steering}\ngi.set_servo_pwm({steering})\nsend_node.broadcast_data(steering_val, throttle_val, 0, 0)\n"""
                 command_list.append(command_str)
             elif search(vehicle_command_interpreter.pattern_wait, line):
                 list_args = line.split(' ')
@@ -43,7 +43,9 @@ class vehicle_command_interpreter():
 
     @staticmethod
     def generate_command_script(list_commands):
-        init_code = """from sensor import GPIO_Interaction\nimport time\nmotor_ch = 32\nservo_ch = 33\nenc_channel = 19\ngi = GPIO_Interaction(enc_channel, servo_ch, motor_ch)\n"""
+        init_code = """from sensor import GPIO_Interaction\nimport time\nfrom network import recv_network as rn, send_network as sn\nmotor_ch = 32\nservo_ch = 33\nenc_channel = 19\ngi = GPIO_Interaction(enc_channel, servo_ch, motor_ch)\n"""
+        network_init_lead_vehicle = """steering_val = 0\nthrottle_val = 0\nport_index_send = 1\nsend_node = sn(port_index_send)\n"""
+        init_code += network_init_lead_vehicle
         for command in list_commands:
             init_code = init_code + command
 
