@@ -247,6 +247,7 @@ class Lidar():
         start = 360
         last = -1
         count = 0
+        print("Starting scan")
         for new_scan, quality, angle, distance in self.iterator:
             count += 1
             if quality == 0 and angle == 0 and distance == 0:
@@ -266,6 +267,7 @@ class Lidar():
                 start = 360
                 last = -1
                 count = 0
+                print("Full scan completed")
                 continue
 
             if quality > 1 and distance > 1:
