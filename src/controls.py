@@ -1,7 +1,10 @@
 import time
 
+class NoObject(Exception):
+    pass
+
 class Controls(object):
-    def __init__(self, lidar, gpio, encoder_consumer, carphys, lidar_consumer):
+    def __init__(self, lidar, gpio, carphys ,encoder_consumer, lidar_consumer):
         self.lidar = lidar
         self.gpio = gpio
         self.encoder_consumer = encoder_consumer
@@ -37,8 +40,8 @@ class Controls(object):
         """
         str = self.last_steering
         vel = speed
-        carphys.update_path(self.lidar.get_position(self.obj),str,vel)
-        past_obj_pos = carphys.get_past_obj_pos()
+        self.carphys.update_path(self.lidar.get_position(self.obj),str,vel)
+        past_obj_pos = self.carphys.get_past_obj_pos()
         if np.min(past_obj_pos[:,0]) < 0:   #takes smallest x value
             return lidar.get_position(obj)[1]
         else:
@@ -73,11 +76,28 @@ class Controls(object):
         return b
 
     def get_lidar_data(self):
-        #TODO: double check
+        #TODO: double checki
+        print("getting lidar data")
         scan = self.lidar_consumer.get_scan()
-        obj,line = lidar.scan_break_objects_lines(scan)
-        self.obj = obj
-        self.line = line
+        print("in get_lidar_data got scan")
+        if scan:
+            print("Scanning")
+            try:
+                print(scan)
+                data = self.lidar.scan_break_objects_lines(scan)
+                if not data:
+                    raise NoObject
+                obj, line = data
+                self.obj = obj
+                self.line = line
+            except NoObject:
+                raise NoObject
+            except:
+                raise ValueError("Get lidar data")
+                
+        else: 
+            print("Scan = None")
+            self.get_lidar_data()
 
     def get_distance(self):
         position = self.lidar.get_position(self.obj)
@@ -156,8 +176,9 @@ class Dumb_Networking_Controls(Controls):
 
 class Lidar_Controls(Controls):
     def __init__(self, vp, vi, vd, vk, sp, si, sd, lidar, gpio, carphys, encoder_consumer, lidar_consumer, ref=0):
+        print("init done")
         super(Lidar_Controls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer)    #runs init of superclass
-
+        print("super done")
         self.velocity_P = vp
         self.velocity_I = vi
         self.velocity_D = vd
@@ -181,13 +202,16 @@ class Lidar_Controls(Controls):
         self.steering_output_scaling = 1/100
 
         self.last_steering = 0
-
+        
         if ref==0:
+            print("getting ldiardata")
             self.get_lidar_data()
+            print("lidar gotten")
             self.initial_distance = self.get_distance()
 
     def control_loop(self, speed):
-        v_error, d_error, s_error = self.get_errors(speed)
+        d_ref = self.initial_distance
+        v_error, d_error, s_error = self.get_errors(speed, d_ref)
 
         velocity_pid_input = d_error * self.velocity_Kp + v_error
         velocity_pid_output = self.velocity_pid_controller(velocity_pid_input)
@@ -202,14 +226,14 @@ class Lidar_Controls(Controls):
         return steering_cmd, accel_cmd
 
 
-    def get_errors():
+    def get_errors(self, speed, d_ref):
         v_error = self.find_velocity_error()
-        d_error = self.find_distance_error()
+        d_error = self.find_distance_error(d_ref)
         s_error = self.find_steering_error(speed)
 
         return v_error, d_error, s_error
 
-    def velocity_pid_controller(pid_input):
+    def velocity_pid_controller(self, pid_input):
         time = time.time()
         self.velocity_pid_list.append((pid_input,time))
 
@@ -222,7 +246,7 @@ class Lidar_Controls(Controls):
 
         return pid_val
 
-    def steering_pid_controller(pid_input):
+    def steering_pid_controller(self, pid_input):
         time = time.time()
         self.steering_pid_list.append((pid_input,time))
 
@@ -284,7 +308,7 @@ class Smart_Networking_Controls(Controls):
     """
 
     """
-    def get_errors():
+    def get_errors(self):
         v_error = self.find_velocity_error()
         d_error = self.find_distance_error()
         s_error = self.find_steering_error()

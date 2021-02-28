@@ -151,7 +151,7 @@ class Object:
     def find_line_data(self,p1,p2):
         center = (p2+p1)/2                  #center of line segment
         length = np.linalg.norm(p2-p1)      #length of line segment
-        dp = np.flip(p2-p1)* np.array([-1,1])
+        dp = np.flip(p2-p1,0)* np.array([-1,1])
         angle = np.arctan(dp[1]/dp[0])*180/np.pi      #angle from x axis to normal of line
 
         return angle, center, length
@@ -219,8 +219,9 @@ class Lidar():
     def __init__(self, scanner, USB_port='/dev/ttyUSB0'):
         if scanner:
             self.lidar = RPLidar(USB_port)
+            self.lidar.stop()
             self.lidar.connect()
-            self.iterator = self.lidar.iter_measurments(800)
+            self.iterator = self.lidar.iter_measurments(1000)
         self.time_last = 0
         self.last_measurement = None
         self.object_found = False
@@ -277,14 +278,23 @@ class Lidar():
 
             if self.end_scan:
                 break
+        print("End scan = ", self.end_scan)
+
+    def get_scan_from_consumer(self):
+        scan = self.lidar_consumer.get_scan()
+        self.scan_read = True
+        return scan
 
     def get_scan(self):
-        self.lidar_consumer.get_scan()
-        self.scan_read = True
-        return self.new_scan
+        print("in get_scan")
+        try:
+            scan = self.new_scan
+        except Exception as e:
+            print(e)
+        return scan
 
 
-    def polar_to_cartesian(angle,distance):
+    def polar_to_cartesian(self,angle,distance):
         tx_ = np.cos((float(angle)*np.pi/180))*float(distance)
         ty_ = -np.sin((float(angle)*np.pi/180))*float(distance)
 
@@ -318,7 +328,7 @@ class Lidar():
                 for a,d in polar:
 
                     if a > break_list[index] or a < break_list[0]:
-                        lx,ly=self.polar_to_cartesian(a,d)
+                        ly,lx=self.polar_to_cartesian(a,d)
 
                         temp[0].append(lx)
                         temp[1].append(ly)
@@ -328,7 +338,7 @@ class Lidar():
                 temp = ([],[])
                 for a,d in polar:
                     if a > break_list[index] and a < break_list[index+1]:
-                        lx,ly=self.polar_to_cartesian(a,d)
+                        ly,lx=self.polar_to_cartesian(a,d)
                         temp[0].append(lx)
                         temp[1].append(ly)
                 broken_objects.append(temp)
@@ -336,8 +346,8 @@ class Lidar():
         return broken_objects
 
     def scan_break_objects_lines(self,scan):
-        broken = l.break_DCs(scan,400,200)
-        obj = l.find_obj(broken)
+        broken = self.break_DCs(scan,400,200)
+        obj = self.find_obj(broken)
         if obj:
             line_points = obj.find_line_points(25)
             lines = obj.find_line_lines(line_points)
@@ -349,7 +359,9 @@ class Lidar():
                 line = lines[0]
             obj.set_center(line[1])
             return obj, line
-        return None
+        else:
+            print("No object found :(")
+            return None
 
     def find_main_line(self,lines): #line: [angle center length]
         if self.last_line:
@@ -468,10 +480,8 @@ class Lidar():
         return delta_v
 
     def get_position(self, object):
-        if object.center:
-            return object.center
-        else:
-            return object.midpoint
+        print(object.center)
+        return object.center
 
     def get_velocity(self, object):
         return object.velocity

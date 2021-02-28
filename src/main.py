@@ -78,7 +78,7 @@ def main():
     sd = 0
 
     gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
-
+     
     #INIT PRODCUER CONSUMERS
 
     #Network
@@ -119,9 +119,9 @@ def main():
                 packet = nc.get_packet()
                 controller.get_newest_steering_cmd(packet.steering)
                 controller.get_newest_accel_cmd(packet.throttle)
-                str, accl = controller.control_loop(encoder_speed)
+                strg, accl = controller.control_loop(encoder_speed)
                 #Broadcast after control system
-                sn.broadcast_data(accl, str, encoder_speed, time.time())
+                sn.broadcast_data(accl, strg, encoder_speed, time.time())
         #Uncomment when written
         #TODO: when smart networking is implemented
         #elif(c_type == "smart"):
@@ -130,21 +130,33 @@ def main():
 
         elif(c_type == "lidar"):
             #call lidar control system
-            new_lidar = Lidar()
+            new_lidar = Lidar(False)
+            print("lidar created")
+            time.sleep(0.1)
             carphys = CarPhysics()
-            controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ec, lc)
-
+            print("Car physics initialized")
+            controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ec, lp)
+            print("going into loop")
             while True:
-                controller.get_lidar_data()
+                object_found = False
+                while not object_found:
+                    try:
+                        controller.get_lidar_data()
+                        object_found = True
+                    except NoObject:
+                        pass
+
                 encoder_speed = controller.get_encoder_velocity()
 
-                str, accl = controller.control_loop(encoder_speed)
+                strg, accl = controller.control_loop(encoder_speed)
                 #Broadcast after control system
-                sn.broadcast_data(accl, str, encoder_speed, time.time) #TODO: idk if we need this here
+                print("Steering ",strg,"Accl ",accl)
+                sn.broadcast_data(accl, strg, encoder_speed, time.time) #TODO: idk if we need this here
         else:
             log.log_error("Input was not a valid type")
     except Exception as e:
-        err = "Exitted loop - Exception: " + e
+        err = "Exitted loop - Exception: " + str(e)
+        raise ValueError(err)
         log.log_error(err)
 
 
@@ -159,11 +171,11 @@ def main():
     lc.halt_thread()
 
     #gracefully exit program and reset vars
-    graceful_shutdown(log)
+    graceful_shutdown(log,gpio)
 
-def graceful_shutdown(log):
+def graceful_shutdown(log,gpio):
     #TODO: Cayman, how do I use this function, is it initalized somewhere
-    GPIO_Interaction.shut_down()
+    gpio.shut_down()
     log.log_info("Shutting down gracefully")
 
 if __name__ == "__main__":
