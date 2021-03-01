@@ -1,4 +1,5 @@
 import time
+import numpy as np
 
 class NoObject(Exception):
     pass
@@ -40,10 +41,16 @@ class Controls(object):
         """
         str = self.last_steering
         vel = speed
-        self.carphys.update_path(self.lidar.get_position(self.obj),str,vel)
-        past_obj_pos = self.carphys.get_past_obj_pos()
-        if np.min(past_obj_pos[:,0]) < 0:   #takes smallest x value
-            return lidar.get_position(obj)[1]
+        #self.carphys.update_path(self.lidar.get_position(self.obj),str,vel)
+        #past_obj_pos = self.carphys.get_past_obj_pos()
+        past_obj_pos = self.carphys.update_path(self.lidar.get_position(self.obj),str,vel)
+        try:
+            past_obj_pos.shape[0]
+        except IndexError:
+            print("index err")
+            return self.lidar.get_position(self.obj)[1]
+        if np.min(past_obj_pos[:,0]) > 0:   #takes smallest x value
+            return self.lidar.get_position(self.obj)[1]
         else:
             min = np.argmin(abs(past_obj_pos))
             try:
@@ -77,27 +84,26 @@ class Controls(object):
 
     def get_lidar_data(self):
         #TODO: double checki
-        print("getting lidar data")
-        scan = self.lidar_consumer.get_scan()
-        print("in get_lidar_data got scan")
-        if scan:
-            print("Scanning")
-            try:
-                print(scan)
-                data = self.lidar.scan_break_objects_lines(scan)
-                if not data:
-                    raise NoObject
-                obj, line = data
-                self.obj = obj
-                self.line = line
-            except NoObject:
-                raise NoObject
-            except:
-                raise ValueError("Get lidar data")
-                
-        else: 
-            print("Scan = None")
-            self.get_lidar_data()
+        valid_read = False
+        while not valid_read:
+            scan = self.lidar_consumer.get_scan()
+            if scan and not self.lidar_consumer.scan_read:
+                try:
+                    self.lidar_consumer.scan_read = True
+                    data = self.lidar.scan_break_objects_lines(scan)
+                    if not data:
+                        raise NoObject
+                    obj, line = data
+                    self.obj = obj
+                    self.line = line
+                    valid_read = True
+                except NoObject:
+                    print("No object")
+                    time.sleep(0.08)
+                except:
+                    raise ValueError("Get lidar data")
+            else:
+                time.sleep(0.01)
 
     def get_distance(self):
         position = self.lidar.get_position(self.obj)
@@ -134,7 +140,7 @@ class Dumb_Networking_Controls(Controls):
         self.transmission_delay = self.get_transmission_delay()
 
         delay = self.initial_distance/enc_vel + self.transmission_delay
-        delayed_time = time.time-delay
+        delayed_time = time.time()-delay
 
         accel_cmd = self.accel_cmd
         steering_cmd = self.get_delayed_steering_cmd(delayed_time)
@@ -176,9 +182,7 @@ class Dumb_Networking_Controls(Controls):
 
 class Lidar_Controls(Controls):
     def __init__(self, vp, vi, vd, vk, sp, si, sd, lidar, gpio, carphys, encoder_consumer, lidar_consumer, ref=0):
-        print("init done")
         super(Lidar_Controls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer)    #runs init of superclass
-        print("super done")
         self.velocity_P = vp
         self.velocity_I = vi
         self.velocity_D = vd
@@ -208,6 +212,7 @@ class Lidar_Controls(Controls):
             self.get_lidar_data()
             print("lidar gotten")
             self.initial_distance = self.get_distance()
+            self.carphys.set_past_obj_pos(self.lidar.get_position(self.obj))
 
     def control_loop(self, speed):
         d_ref = self.initial_distance
@@ -234,8 +239,8 @@ class Lidar_Controls(Controls):
         return v_error, d_error, s_error
 
     def velocity_pid_controller(self, pid_input):
-        time = time.time()
-        self.velocity_pid_list.append((pid_input,time))
+        t = time.time()
+        self.velocity_pid_list.append((pid_input,t))
 
         if len(self.velocity_pid_list) > self.velocity_pid_length:
             del self.velocity_pid_list[0]
@@ -247,8 +252,8 @@ class Lidar_Controls(Controls):
         return pid_val
 
     def steering_pid_controller(self, pid_input):
-        time = time.time()
-        self.steering_pid_list.append((pid_input,time))
+        t = time.time()
+        self.steering_pid_list.append((pid_input,t))
 
         if len(self.steering_pid_list) > self.steering_pid_length:
             del self.steering_pid_list[0]
@@ -267,7 +272,7 @@ class Lidar_Controls(Controls):
         if not pid_list or len(pid_list)<2:
             return 0
 
-        modifier = self.I
+        modifier = I
         sum = 0
         """change taking from wrong side"""
         for x,(pid,t) in enumerate(pid_list[:-1]):    #reiman sum of distance between vehicles
@@ -281,8 +286,8 @@ class Lidar_Controls(Controls):
             return 0
 
         """change taking from wrong side"""
-        d_val = (self.pid_list[-1][0]-self.pid_list[-2][0])/(self.pid_list[-1][1]-self.pid_list[-2][1])
-        d_val *= self.D
+        d_val = (pid_list[-1][0]-pid_list[-2][0])/(pid_list[-1][1]-pid_list[-2][1])
+        d_val *= D
 
         return d_val
 

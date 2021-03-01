@@ -9,6 +9,7 @@ Last revision: Feburary 17th, 2020
 import sys
 import threading
 import network
+import time
 from sensor import GPIO_Interaction
 from queue import Queue
 from logger import Sys_logger
@@ -138,20 +139,15 @@ def main():
             controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ec, lp)
             print("going into loop")
             while True:
-                object_found = False
-                while not object_found:
-                    try:
-                        controller.get_lidar_data()
-                        object_found = True
-                    except NoObject:
-                        pass
+                controller.get_lidar_data()
 
                 encoder_speed = controller.get_encoder_velocity()
-
+                then = time.time()
                 strg, accl = controller.control_loop(encoder_speed)
+                print("time to run control loop: ",time.time()-then)
                 #Broadcast after control system
                 print("Steering ",strg,"Accl ",accl)
-                sn.broadcast_data(accl, strg, encoder_speed, time.time) #TODO: idk if we need this here
+                #sn.broadcast_data(accl, strg, encoder_speed, time.time) #TODO: idk if we need this here
         else:
             log.log_error("Input was not a valid type")
     except Exception as e:

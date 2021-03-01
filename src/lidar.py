@@ -115,7 +115,12 @@ class Object:
             return 0
         else:
             distance = (self.midpoint[0]**2+self.midpoint[1]**2)**0.5
-            return 1000/distance
+            from_center = abs(self.midpoint[1])
+            l = distance + 5* from_center 
+            if l == 0:
+                l = 0.01
+
+            return 1000/l
         return likeness
 
     def find_line_points(self,threshold):   #refrenced from https://github.com/Robotics-kosta/AMR-Line-extraction-from-Lidar-sensor-with-Split-and-Merge-algorithm/blob/master/src/main.py
@@ -153,7 +158,6 @@ class Object:
         length = np.linalg.norm(p2-p1)      #length of line segment
         dp = np.flip(p2-p1,0)* np.array([-1,1])
         angle = np.arctan(dp[1]/dp[0])*180/np.pi      #angle from x axis to normal of line
-
         return angle, center, length
 
     def find_line_lines(self,lines):
@@ -248,31 +252,51 @@ class Lidar():
         start = 360
         last = -1
         count = 0
+        first = True    #first measurement is always junk
         print("Starting scan")
+        c = 0
+        then = time()
+        start_time = time()
         for new_scan, quality, angle, distance in self.iterator:
-            count += 1
+            c += 1
             if quality == 0 and angle == 0 and distance == 0:
                 continue
 
             if last == -1:
+                if first:
+                    if angle > 90 and angle < 270:
+                        first = False
+                        continue
+                    else:
+                        continue
+                start_time = time()
                 start = angle
                 last = angle+0.5
                 if quality > 1 and distance > 1:
-                    scan.append((angle,distance))
+                    if angle < 90 or angle > 270:
+                        scan.append((angle,distance))
                 continue
-
-            if last < start and angle > start and count > 20:
+            count += 1
+            if last < start and angle > start and count > 30:
                 self.new_scan = scan
                 self.scan_read = False
-                scan = []
                 start = 360
                 last = -1
                 count = 0
+                now =time()
+                print("since last scan: ", now-then)
+                print("since start: ", now-start_time)
+                then = now
+                start_time = now
+                print("Measurements: ",c)
+                c = 0
                 print("Full scan completed")
+                scan = []
                 continue
 
             if quality > 1 and distance > 1:
-                scan.append((angle,distance))
+                if angle < 90 or angle > 270:
+                    scan.append((angle,distance))
 
             last = angle
 
@@ -286,7 +310,6 @@ class Lidar():
         return scan
 
     def get_scan(self):
-        print("in get_scan")
         try:
             scan = self.new_scan
         except Exception as e:
@@ -311,24 +334,36 @@ class Lidar():
         return cartesian
 
     def break_DCs(self, polar, threshold, length):      #tries to break up scan by discontinuities
+        """
+        rotating 90 degrees then reverting before conversion to get around discontinuities around theta = 0/360
+        """
         break_list = []
+        for index, pt in enumerate(polar):
+            t_ang = pt[0]
+            polar[index] = (t_ang + 90 if t_ang + 90 < 360 else t_ang - 270, pt[1])
+
+        polar.sort()            
         for index, (angle, distance) in enumerate(polar):
             if index == len(polar)-1:
                 if abs(distance-polar[0][1]) > threshold:  #make this loop around
-                    break_list.append(polar[0][0]-0.5)
+                    t_ang = polar[0][0]
+                    break_list.append(t_ang-0.5)
+                    break_list.sort()
             else:
                 if abs(distance-polar[index+1][1]) > threshold:  #make this loop around
-                    break_list.append(polar[index+1][0]-0.5)
+                    t_ang = polar[index+1][0]
+                    break_list.append(t_ang-0.5)
                     break_list.sort()
+
 
         broken_objects = []
         for index, angle in enumerate(break_list):
             if index == len(break_list)-1:
                 temp = ([],[])
                 for a,d in polar:
-
                     if a > break_list[index] or a < break_list[0]:
-                        ly,lx=self.polar_to_cartesian(a,d)
+                        a = a - 90 if a - 90 > 0 else a + 270
+                        lx,ly=self.polar_to_cartesian(a,d)
 
                         temp[0].append(lx)
                         temp[1].append(ly)
@@ -337,8 +372,11 @@ class Lidar():
             else:
                 temp = ([],[])
                 for a,d in polar:
+
                     if a > break_list[index] and a < break_list[index+1]:
-                        ly,lx=self.polar_to_cartesian(a,d)
+                        a = a - 90 if a - 90 > 0 else a + 270
+
+                        lx,ly=self.polar_to_cartesian(a,d)
                         temp[0].append(lx)
                         temp[1].append(ly)
                 broken_objects.append(temp)
@@ -358,6 +396,7 @@ class Lidar():
             else:
                 line = lines[0]
             obj.set_center(line[1])
+            print(line)
             return obj, line
         else:
             print("No object found :(")

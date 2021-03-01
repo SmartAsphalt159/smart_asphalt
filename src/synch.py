@@ -6,6 +6,7 @@ Last revision: Feb 17th, 2020
 
 import threading
 import timing
+import time
 import network as net
 from queue import Queue
 from threading import Lock
@@ -143,7 +144,7 @@ class encoder_producer(queue_skeleton, Encoder):
 
         #creating sampling delay
         #TODO: verify if millisecond / microsend time is necessary
-        timing.sleep_for(self.sample_wait)
+            timing.sleep_for(self.sample_wait)
 
 class encoder_consumer(queue_skeleton):
 
@@ -183,6 +184,8 @@ class lidar_producer(queue_skeleton, Lidar):
         queue_skeleton.__init__(self, None, out_que, lock, logger, timeout)
         Lidar.__init__(self, True)
         self.running = True
+        self.time_last_gotten = time.time()
+        
 
     def halt_thread(self):
         self.running = False
@@ -190,13 +193,21 @@ class lidar_producer(queue_skeleton, Lidar):
     #enqueue encoder values
     def run(self):
         #initiate the scan
+        print("starting scan, hi andrew!")
         self.start_scan()
+        print("scan started, yahoo")
         while(self.running):
+            print("loop cycle:")
             try:
+
                 scan = self.get_scan()
+                now = time.time()
+                print("Last scan gotten",now-self.time_last_gotten)
+                self.time_last_gotten = now
                 self.enqueue(scan)
             except:
-                self.logger.log_error("Failed to read encoder value")
+                print("failed to read lidar value")
+                self.logger.log_error("Failed to read lidar value")
 
 class lidar_consumer(queue_skeleton, Lidar):
 
@@ -205,13 +216,13 @@ class lidar_consumer(queue_skeleton, Lidar):
         queue_skeleton.__init__(self, in_que, out_que, lock, logger, thr_timeout)
         self.running = True
         self.timeout = thr_timeout
+        self.scan = None
+
 
     def halt_thread(self):
         self.running = False
 
     #return the latest scan
-    def get_scan(self):
-        return self.scan
 
     def run(self):
         while(self.running):
