@@ -59,7 +59,7 @@ def main():
     # TODO: update to true value
     enc_channel = 19
     enc_timeout = 2
-    sample_wait = 1
+    sample_wait = 0.1
     enc_thread_timeout = 5
 
     # LIDAR VARS
@@ -146,11 +146,13 @@ def main():
                 print("Steering ",strg,"Accl ",accl)
                 #sn.broadcast_data(accl, strg, encoder_speed, time.time) #TODO: idk if we need this here
         elif(c_type == "encoder_test"):
+            new_lidar = Lidar(False)
+            carphys = CarPhysics()
             controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lc, mode = 1)
             while True:
                 encoder_speed = controller.get_encoder_velocity()
                 print(f"Speed = {encoder_speed}")
-                time.sleep(0.1)
+                time.sleep(0.01)
 
         else:
             log.log_error("Input was not a valid type")
