@@ -112,7 +112,7 @@ def main():
             new_lidar = Lidar(False)
 
             carphys = CarPhysics()
-            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lc, mode = 1)
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lp, mode = 1)
 
             while True:
                 #TODO: double check
@@ -145,6 +145,13 @@ def main():
                 #Broadcast after control system
                 print("Steering ",strg,"Accl ",accl)
                 #sn.broadcast_data(accl, strg, encoder_speed, time.time) #TODO: idk if we need this here
+        elif(c_type == "encoder_test"):
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lc, mode = 1)
+            while True:
+                encoder_speed = controller.get_encoder_velocity()
+                print(f"Speed = {encoder_speed}")
+                time.sleep(0.1)
+
         else:
             log.log_error("Input was not a valid type")
     except Exception as e:
