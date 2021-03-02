@@ -79,7 +79,7 @@ def main():
     sd = 0
 
     gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
-     
+
     #INIT PRODCUER CONSUMERS
 
     #Network
@@ -112,7 +112,7 @@ def main():
             new_lidar = Lidar(False)
 
             carphys = CarPhysics()
-            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lc)
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lc, mode = 1)
 
             while True:
                 #TODO: double check
@@ -132,12 +132,9 @@ def main():
         elif(c_type == "lidar"):
             #call lidar control system
             new_lidar = Lidar(False)
-            print("lidar created")
             time.sleep(0.1)
             carphys = CarPhysics()
-            print("Car physics initialized")
             controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ec, lp)
-            print("going into loop")
             while True:
                 controller.get_lidar_data()
 

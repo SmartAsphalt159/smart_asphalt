@@ -138,12 +138,13 @@ class Dumb_Networking_Controls(Controls):
 
     def control_loop(self, enc_vel):
         self.transmission_delay = self.get_transmission_delay()
-
-        delay = self.initial_distance/enc_vel + self.transmission_delay
-        delayed_time = time.time()-delay
-
         accel_cmd = self.accel_cmd
-        steering_cmd = self.get_delayed_steering_cmd(delayed_time)
+        if enc_vel is not 0:
+            delay = self.initial_distance/enc_vel + self.transmission_delay
+            delayed_time = time.time()-delay
+            steering_cmd = self.get_delayed_steering_cmd(delayed_time)
+        else:
+            steering_cmd = 0
 
         self.gpio.set_servo_pwm(steering_cmd)
         self.gpio.set_motor_pwm(accel_cmd)
@@ -206,7 +207,7 @@ class Lidar_Controls(Controls):
         self.steering_output_scaling = 1/100
 
         self.last_steering = 0
-        
+
         if ref==0:
             print("getting ldiardata")
             self.get_lidar_data()
