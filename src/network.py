@@ -2,7 +2,7 @@
 
 """
 Networking implementation for smart asphalt's platoon
-Last revision: Friday, Jan 8th
+Last revision: Friday, March 2nd
 """
 
 import os
@@ -29,7 +29,7 @@ def bind_skt(port, skt_type):
 
     ######## BEGIN SOCKET INITIALIZATION ########
     skt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)     #using ipv4 address + UDP packets
-    ip = str(os.system('hostname -I | awk \'{print $1}\''))
+    ip = "100.100.1.255" #str(os.system('hostname -I | awk \'{print $1}\''))
     if(skt_type == 0):
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  #configuring for broadcasting
             skt.connect((ip, port))                  #connecting on the braodcast port
