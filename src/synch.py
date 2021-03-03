@@ -7,6 +7,8 @@ Last revision: Feb 17th, 2020
 import threading
 import timing
 import time
+import serial
+import json
 import network as net
 from queue import Queue
 from threading import Lock
@@ -126,6 +128,9 @@ class encoder_producer(queue_skeleton, Encoder):
         Encoder.__init__(self, channel)
         self.running = True
         self.sample_wait = sample_wait
+        self.ser = serial.Serial('/dev/ttyTHS1', 19200, timeout=0.8)
+        self.ser.flush()
+        print("encoder initialized")
 
     def halt_thread(self):
         self.running = False
@@ -134,17 +139,42 @@ class encoder_producer(queue_skeleton, Encoder):
     def run(self):
         while(self.running):
             try:
-                #update speed to latest value
-                self.sample_speed()
-                #get latest value
-                speed = self.get_speed()
-                self.enqueue(speed)
-            except:
+                try:
+                    start = time.time()
+                    data = self.ser.readline().decode()
+                    next_t = time.time()
+                    #print(data)
+                except serial.SerialTimeoutException:
+                    print("Serial Timeout")
+                    self.logger.log_error("Serial Timeout error")
+                except serial.SerialException as e:
+                    print(e)
+                    self.logger.log_error(e)
+                except Exception as e:
+                    print(e)
+                    raise e
+                try:
+                    j_data = json.loads(data)
+                    tally = j_data["tally"]
+                    delta_ms = j_data["delta_time"]
+                    self.sample_speed(tally, delta_ms)
+                    speed = self.get_speed()
+                    #print(speed)
+                    self.enqueue(speed)
+                    now = time.time()
+                    print(f"Time taken to get data: {next_t - start}")
+                    print(f"TIme taken after: {now - next_t}")
+                except Exception as e:
+
+                    print(e)
+
+            except Exception as e:
+                print(e)
                 self.logger.log_error("Failed to read encoder value")
 
         #creating sampling delay
         #TODO: verify if millisecond / microsend time is necessary
-            timing.sleep_for(self.sample_wait)
+            #timing.sleep_for(self.sample_wait)
 
 class encoder_consumer(queue_skeleton):
 
@@ -153,11 +183,13 @@ class encoder_consumer(queue_skeleton):
         queue_skeleton.__init__(self, in_que, out_que, lock, logger, thr_timeout)
         self.running = True
         self.timeout = thr_timeout
+        self.speed = 0
 
     def halt_thread(self):
         self.running = False
 
     def get_speed(self):
+        print("In consumer get speed")
         return self.speed
 
     def run(self):

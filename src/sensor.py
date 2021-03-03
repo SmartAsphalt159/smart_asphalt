@@ -50,7 +50,7 @@ class GPIO_Interaction():
 
 
 class Encoder():
-    def __init__(self, channel, mag_num=1, tire_r=350):
+    def __init__(self, channel, mag_num=2, tire_r=350):
         self.mag_num = mag_num
         self.channel = channel
         self.r = tire_r
@@ -63,18 +63,17 @@ class Encoder():
     def on_edge(self,channel):
         self.tally += 1
 
-    def sample_speed(self):
+    def sample_speed(self, tally, delta_ms):
+        self.tally = tally
+         
         #TODO: Call on regular intervals in producer consumer
-        now = time.time()
-        rps = self.tally/(2*self.mag_num*(now-self.last_time))
+        rps = self.tally/(self.mag_num*(delta_ms/1000))
         speed = 2*3.1415*rps*self.r
-        print(f"tally = {self.tally}\ndt = {now-self.last_time}")
-        self.tally = 0
-        self.last_time = now
         self.speed = speed
         self.speed_read = False
 
     def get_speed(self):
+        print("get speed in enc_class")
         #TODO: Should output from producer consumer
         self.speed_read = True
         return self.speed
