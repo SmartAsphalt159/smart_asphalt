@@ -9,6 +9,7 @@ Last revision: Feburary 17th, 2020
 import sys
 import threading
 import network
+import time
 from sensor import GPIO_Interaction
 from queue import Queue
 from logger import Sys_logger
@@ -38,11 +39,6 @@ def main():
     encoder_q = Queue(0)
     lidar_q = Queue(0)
 
-    #INIT LOCKS
-    net_lock = threading.Lock()
-    enc_lock = threading.Lock()
-    lid_lock = threading.Lock()
-
     #NETWORKING VARS
     recvport = 1
     sendport = 2
@@ -58,7 +54,7 @@ def main():
     # TODO: update to true value
     enc_channel = 19
     enc_timeout = 2
-    sample_wait = 1
+    sample_wait = 0.1
     enc_thread_timeout = 5
 
     # LIDAR VARS
@@ -82,16 +78,16 @@ def main():
     #INIT PRODCUER CONSUMERS
 
     #Network
-    np = network_producer(net_q, net_lock, recvport, log, timeout)
-    nc = network_consumer(net_q, None, net_lock, log, net_thread_timeout)
+    np = network_producer(net_q, recvport, log, timeout)
+    nc = network_consumer(net_q, None, log, net_thread_timeout)
 
     #Encoder
-    ep = encoder_producer(encoder_q, enc_lock, enc_channel, log, enc_timeout, sample_wait)
-    ec = encoder_consumer(encoder_q, None, enc_lock, log, enc_thread_timeout)
+    ep = encoder_producer(encoder_q, enc_channel, log, enc_timeout, sample_wait)
+    ec = encoder_consumer(encoder_q, None, log, enc_thread_timeout)
 
     #Lidar (pull controls updates)
-    lp = lidar_producer(lidar_q, lid_lock, lidar_channel, log, lid_timeout)
-    lc = lidar_consumer(lidar_q, None, lid_lock, log, lid_thread_timeout)
+    lp = lidar_producer(lidar_q, lidar_channel, log, lid_timeout)
+    lc = lidar_consumer(lidar_q, None, log, lid_thread_timeout)
 
     #start the producer consumer threads
     np.start()
@@ -111,7 +107,7 @@ def main():
             new_lidar = Lidar(False)
 
             carphys = CarPhysics()
-            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lc)
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lp, mode = 1)
 
             while True:
                 #TODO: double check
@@ -119,9 +115,9 @@ def main():
                 packet = nc.get_packet()
                 controller.get_newest_steering_cmd(packet.steering)
                 controller.get_newest_accel_cmd(packet.throttle)
-                str, accl = controller.control_loop(encoder_speed)
+                strg, accl = controller.control_loop(encoder_speed)
                 #Broadcast after control system
-                sn.broadcast_data(accl, str, encoder_speed, time.time())
+                sn.broadcast_data(accl, strg, encoder_speed, time.time())
         #Uncomment when written
         #TODO: when smart networking is implemented
         #elif(c_type == "smart"):
@@ -130,21 +126,34 @@ def main():
 
         elif(c_type == "lidar"):
             #call lidar control system
-            new_lidar = Lidar()
+            new_lidar = Lidar(False)
+            time.sleep(0.1)
             carphys = CarPhysics()
-            controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ec, lc)
-
+            controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ec, lp)
             while True:
                 controller.get_lidar_data()
-                encoder_speed = controller.get_encoder_velocity()
 
-                str, accl = controller.control_loop(encoder_speed)
+                encoder_speed = controller.get_encoder_velocity()
+                then = time.time()
+                strg, accl = controller.control_loop(encoder_speed)
+                print("time to run control loop: ",time.time()-then)
                 #Broadcast after control system
-                sn.broadcast_data(accl, str, encoder_speed, time.time) #TODO: idk if we need this here
+                print("Steering ",strg,"Accl ",accl)
+                #sn.broadcast_data(accl, strg, encoder_speed, time.time) #TODO: idk if we need this here
+        elif(c_type == "encoder_test"):
+            new_lidar = Lidar(False)
+            carphys = CarPhysics()
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lc, mode = 1)
+            while True:
+                encoder_speed = controller.get_encoder_velocity()
+                print(f"Speed = {encoder_speed}")
+                time.sleep(0.01)
+
         else:
             log.log_error("Input was not a valid type")
     except Exception as e:
-        err = "Exitted loop - Exception: " + e
+        err = "Exitted loop - Exception: " + str(e)
+        raise ValueError(err)
         log.log_error(err)
 
 
@@ -159,11 +168,11 @@ def main():
     lc.halt_thread()
 
     #gracefully exit program and reset vars
-    graceful_shutdown(log)
+    graceful_shutdown(log,gpio)
 
-def graceful_shutdown(log):
+def graceful_shutdown(log,gpio):
     #TODO: Cayman, how do I use this function, is it initalized somewhere
-    GPIO_Interaction.shut_down()
+    gpio.shut_down()
     log.log_info("Shutting down gracefully")
 
 if __name__ == "__main__":
