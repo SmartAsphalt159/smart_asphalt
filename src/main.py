@@ -39,11 +39,6 @@ def main():
     encoder_q = Queue(0)
     lidar_q = Queue(0)
 
-    #INIT LOCKS
-    net_lock = threading.Lock()
-    enc_lock = threading.Lock()
-    lid_lock = threading.Lock()
-
     #NETWORKING VARS
     recvport = 1
     sendport = 2
@@ -83,16 +78,16 @@ def main():
     #INIT PRODCUER CONSUMERS
 
     #Network
-    np = network_producer(net_q, net_lock, recvport, log, timeout)
-    nc = network_consumer(net_q, None, net_lock, log, net_thread_timeout)
+    np = network_producer(net_q, recvport, log, timeout)
+    nc = network_consumer(net_q, None, log, net_thread_timeout)
 
     #Encoder
-    ep = encoder_producer(encoder_q, enc_lock, enc_channel, log, enc_timeout, sample_wait)
-    ec = encoder_consumer(encoder_q, None, enc_lock, log, enc_thread_timeout)
+    ep = encoder_producer(encoder_q, enc_channel, log, enc_timeout, sample_wait)
+    ec = encoder_consumer(encoder_q, None, log, enc_thread_timeout)
 
     #Lidar (pull controls updates)
-    lp = lidar_producer(lidar_q, lid_lock, lidar_channel, log, lid_timeout)
-    lc = lidar_consumer(lidar_q, None, lid_lock, log, lid_thread_timeout)
+    lp = lidar_producer(lidar_q, lidar_channel, log, lid_timeout)
+    lc = lidar_consumer(lidar_q, None, log, lid_thread_timeout)
 
     #start the producer consumer threads
     np.start()
@@ -151,7 +146,7 @@ def main():
             controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lc, mode = 1)
             while True:
                 encoder_speed = controller.get_encoder_velocity()
-                print(f"Speed = {encoder_speed}")
+                #print(f"Speed = {encoder_speed}")
                 time.sleep(0.01)
 
         else:

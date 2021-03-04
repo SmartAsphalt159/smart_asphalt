@@ -73,7 +73,7 @@ class Encoder():
         self.speed_read = False
 
     def get_speed(self):
-        print("get speed in enc_class")
+        #print("get speed in enc_class")
         #TODO: Should output from producer consumer
         self.speed_read = True
         return self.speed

@@ -240,7 +240,7 @@ class Lidar():
     def restart(self):
         self.lidar.stop()
         self.lidar.connect()
-        self.iterator = self.lidar.iter_measurments(800)
+        self.iterator = self.lidar.iter_measurments(500)
 
     def start_scan(self):
         #TODO: Implement into Producer consumer... always running
@@ -256,18 +256,38 @@ class Lidar():
         print("Starting scan")
         c = 0
         then = time()
-        start_time = time()
+        start_time = then
+        start_of_loop = then
+        end_of_loop = then
+        t = then
         for new_scan, quality, angle, distance in self.iterator:
-            c += 1
-            if quality == 0 and angle == 0 and distance == 0:
-                continue
+            print("\n")
+            print(f"since last start: {time()-start_of_loop} angle: {angle}")
+            start_of_loop= time()
+            print(f"since last end of loop: {start_of_loop-end_of_loop}")
 
+            c += 1
+            t = time()
+            if quality == 0 and angle == 0 and distance == 0:
+                print(f"time to run {time()-start_of_loop}")
+                end_of_loop = time()
+                print("BAD QUALITY")
+                continue
+            print(f"quality check {time()-t}")
+
+            t = time()
             if last == -1:
                 if first:
                     if angle > 90 and angle < 270:
                         first = False
+                        print(f"time to run {time()-start_of_loop}")
+                        end_of_loop = time()
+                        print("DUMPING FIRST")
                         continue
                     else:
+                        print("NOT DUMPING FIRST")
+                        print(f"time to run {time()-start_of_loop}")
+                        end_of_loop = time()
                         continue
                 start_time = time()
                 start = angle
@@ -275,8 +295,14 @@ class Lidar():
                 if quality > 1 and distance > 1:
                     if angle < 90 or angle > 270:
                         scan.append((angle,distance))
+                print(f"time to run {time()-start_of_loop}")
+                end_of_loop = time()
+                print("APPENDING ANGLE")
                 continue
             count += 1
+            print(f"last check {time()-t}")
+            t = time()
+
             if last < start and angle > start and count > 30:
                 self.new_scan = scan
                 self.scan_read = False
@@ -292,16 +318,33 @@ class Lidar():
                 c = 0
                 print("Full scan completed")
                 scan = []
+                print(f"time to run {time()-start_of_loop}")
+                print(f"Ending angle {angle}\n")
+                print("--------------------------------------------")
+                end_of_loop = time()
                 continue
+            print(f"end scan check{time()-t}")
 
+            t = time()
             if quality > 1 and distance > 1:
                 if angle < 90 or angle > 270:
                     scan.append((angle,distance))
-
+                    print(f"appended angle: {angle}")
+                else:
+                    print(f"filtered angle: {angle}")
+            else:
+                print(f"q: {quality} d: {distance}")
+            print(f"quality and angle check {time()-t}")
+            t = time()
             last = angle
-
+            
             if self.end_scan:
                 break
+            print(f"self.end_scan and angle last {time()-t}")
+            print("END OF LOOP")
+            print(f"time to run {time()-start_of_loop}")
+            end_of_loop = time()
+            t = time()
         print("End scan = ", self.end_scan)
 
     def get_scan_from_consumer(self):

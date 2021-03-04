@@ -21,40 +21,33 @@ from lidar import Lidar
 class queue_skeleton(threading.Thread):
 
     """ Constructor """
-    def __init__(self, inque, outque, lock, logger, timeout):
+    def __init__(self, inque, outque, logger, timeout):
         threading.Thread.__init__(self)
         self.inque = inque
         self.outque = outque
-        self.lock = lock
         self.logger = logger
         self.timeout = timeout
 
     """ Protected Enqueue """
     def enqueue(self, data):
-        self.lock.acquire()
 
         try:
             self.outque.put(data)
         except:
             self.logger.log_error("Failed to enqueue data")
-            self.lock.release()
             return -1
 
-        self.lock.release()
         return 0
 
     """ Protected Dequeue """
     def dequeue(self):
-        self.lock.acquire()
         try:
             data = self.inque.get(timeout=self.timeout)
             self.inque.task_done()
         except:
             self.logger.log_error("Failed to dequeue data")
-            self.lock.release()
             return -1
 
-        self.lock.release()
         return data
 
     """ Empty wrapper """
@@ -68,8 +61,8 @@ class queue_skeleton(threading.Thread):
 class network_producer(queue_skeleton, recv_network):
 
     """Constructor"""
-    def __init__(self, out_que, lock, port, logger, timeout):
-        queue_skeleton.__init__(self, None, out_que, lock, logger, timeout)
+    def __init__(self, out_que, port, logger, timeout):
+        queue_skeleton.__init__(self, None, out_que, logger, timeout)
         recv_network.__init__(self, port)
         self.running = True
 
@@ -93,8 +86,8 @@ class network_producer(queue_skeleton, recv_network):
 class network_consumer(queue_skeleton):
 
     """Constructor"""
-    def __init__(self, in_que, out_que, lock, logger, thr_timeout):
-        queue_skeleton.__init__(self, in_que, out_que, lock, logger, thr_timeout)
+    def __init__(self, in_que, out_que, logger, thr_timeout):
+        queue_skeleton.__init__(self, in_que, out_que, logger, thr_timeout)
         self.running = True
         self.timeout = thr_timeout
 
@@ -123,8 +116,8 @@ class network_consumer(queue_skeleton):
 class encoder_producer(queue_skeleton, Encoder):
 
     """Constructor"""
-    def __init__(self, out_que, lock, channel, logger, timeout, sample_wait):
-        queue_skeleton.__init__(self, None, out_que, lock, logger, timeout)
+    def __init__(self, out_que, channel, logger, timeout, sample_wait):
+        queue_skeleton.__init__(self, None, out_que, logger, timeout)
         Encoder.__init__(self, channel)
         self.running = True
         self.sample_wait = sample_wait
@@ -141,6 +134,7 @@ class encoder_producer(queue_skeleton, Encoder):
             try:
                 try:
                     start = time.time()
+                    self.ser.flush()
                     data = self.ser.readline().decode()
                     next_t = time.time()
                     #print(data)
@@ -162,8 +156,9 @@ class encoder_producer(queue_skeleton, Encoder):
                     #print(speed)
                     self.enqueue(speed)
                     now = time.time()
-                    print(f"Time taken to get data: {next_t - start}")
-                    print(f"TIme taken after: {now - next_t}")
+                    #print(f"Time taken to get data: {next_t - start}")
+                    #print(f"TIme taken after: {now - next_t}")
+                    #print(f"active threads: {threading.active_count()}")
                 except Exception as e:
 
                     print(e)
@@ -179,8 +174,8 @@ class encoder_producer(queue_skeleton, Encoder):
 class encoder_consumer(queue_skeleton):
 
     """Constructor"""
-    def __init__(self, in_que, out_que, lock, logger, thr_timeout):
-        queue_skeleton.__init__(self, in_que, out_que, lock, logger, thr_timeout)
+    def __init__(self, in_que, out_que, logger, thr_timeout):
+        queue_skeleton.__init__(self, in_que, out_que, logger, thr_timeout)
         self.running = True
         self.timeout = thr_timeout
         self.speed = 0
@@ -189,7 +184,7 @@ class encoder_consumer(queue_skeleton):
         self.running = False
 
     def get_speed(self):
-        print("In consumer get speed")
+        #print("In consumer get speed")
         return self.speed
 
     def run(self):
@@ -212,8 +207,8 @@ class encoder_consumer(queue_skeleton):
 class lidar_producer(queue_skeleton, Lidar):
 
     """Constructor"""
-    def __init__(self, out_que, lock, channel, logger, timeout):
-        queue_skeleton.__init__(self, None, out_que, lock, logger, timeout)
+    def __init__(self, out_que, channel, logger, timeout):
+        queue_skeleton.__init__(self, None, out_que, logger, timeout)
         Lidar.__init__(self, True)
         self.running = True
         self.time_last_gotten = time.time()
@@ -225,27 +220,18 @@ class lidar_producer(queue_skeleton, Lidar):
     #enqueue encoder values
     def run(self):
         #initiate the scan
-        print("starting scan, hi andrew!")
-        self.start_scan()
-        print("scan started, yahoo")
-        while(self.running):
-            print("loop cycle:")
-            try:
-
-                scan = self.get_scan()
-                now = time.time()
-                print("Last scan gotten",now-self.time_last_gotten)
-                self.time_last_gotten = now
-                self.enqueue(scan)
-            except:
-                print("failed to read lidar value")
-                self.logger.log_error("Failed to read lidar value")
+        try:
+            self.start_scan()
+        except Exception as e:
+            print(e)
+            print("failed to read lidar value")
+            self.logger.log_error("Failed to read lidar value")
 
 class lidar_consumer(queue_skeleton, Lidar):
 
     """Constructor"""
-    def __init__(self, in_que, out_que, lock, logger, thr_timeout):
-        queue_skeleton.__init__(self, in_que, out_que, lock, logger, thr_timeout)
+    def __init__(self, in_que, out_que, logger, thr_timeout):
+        queue_skeleton.__init__(self, in_que, out_que, logger, thr_timeout)
         self.running = True
         self.timeout = thr_timeout
         self.scan = None
