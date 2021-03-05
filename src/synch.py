@@ -130,11 +130,14 @@ class encoder_producer(queue_skeleton, Encoder):
 
     #enqueue encoder values
     def run(self):
+        print("1. running encoder code")
         while(self.running):
+            #print("aaaah")
             try:
                 try:
                     start = time.time()
                     self.ser.flush()
+                    #print("Flushed")
                     data = self.ser.readline().decode()
                     next_t = time.time()
                     #print(data)
@@ -143,6 +146,7 @@ class encoder_producer(queue_skeleton, Encoder):
                     self.logger.log_error("Serial Timeout error")
                 except serial.SerialException as e:
                     print(e)
+                    print("help")
                     self.logger.log_error(e)
                 except Exception as e:
                     print(e)
@@ -156,9 +160,9 @@ class encoder_producer(queue_skeleton, Encoder):
                     #print(speed)
                     self.enqueue(speed)
                     now = time.time()
-                    #print(f"Time taken to get data: {next_t - start}")
-                    #print(f"TIme taken after: {now - next_t}")
-                    #print(f"active threads: {threading.active_count()}")
+                    #print(f"----Time taken to get data: {next_t - start}")
+                    #print(f"----TIme taken after: {now - next_t}")
+                    #print(f"----active threads: {threading.active_count()}")
                 except Exception as e:
 
                     print(e)
@@ -166,7 +170,7 @@ class encoder_producer(queue_skeleton, Encoder):
             except Exception as e:
                 print(e)
                 self.logger.log_error("Failed to read encoder value")
-
+        print("Out of loop")
         #creating sampling delay
         #TODO: verify if millisecond / microsend time is necessary
             #timing.sleep_for(self.sample_wait)

@@ -69,7 +69,7 @@ def main():
     vd = 0
     vk = 1
     #Steering constants
-    sp = 1
+    sp = 10
     si = 0
     sd = 0
 
@@ -79,7 +79,7 @@ def main():
 
     #Network
     np = network_producer(net_q, recvport, log, timeout)
-    nc = network_consumer(net_q, None, log, net_thread_timeout)
+    #nc = network_consumer(net_q, None, log, net_thread_timeout)
 
     #Encoder
     ep = encoder_producer(encoder_q, enc_channel, log, enc_timeout, sample_wait)
@@ -87,15 +87,15 @@ def main():
 
     #Lidar (pull controls updates)
     lp = lidar_producer(lidar_q, lidar_channel, log, lid_timeout)
-    lc = lidar_consumer(lidar_q, None, log, lid_thread_timeout)
+    #lc = lidar_consumer(lidar_q, None, log, lid_thread_timeout)
 
     #start the producer consumer threads
     np.start()
-    nc.start()
+    #nc.start()
     ep.start()
     ec.start()
     lp.start()
-    lc.start()
+    #lc.start()
 
     try:
         #update local objects (done by threads)
@@ -132,8 +132,9 @@ def main():
             controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ec, lp)
             while True:
                 controller.get_lidar_data()
-
+                print("got lidar")
                 encoder_speed = controller.get_encoder_velocity()
+                print(f"encoder_speed: {encoder_speed}")
                 then = time.time()
                 strg, accl = controller.control_loop(encoder_speed)
                 print("time to run control loop: ",time.time()-then)
@@ -143,7 +144,8 @@ def main():
         elif(c_type == "encoder_test"):
             new_lidar = Lidar(False)
             carphys = CarPhysics()
-            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lc, mode = 1)
+            nc = None
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lp, mode = 1)
             while True:
                 encoder_speed = controller.get_encoder_velocity()
                 #print(f"Speed = {encoder_speed}")
@@ -152,6 +154,7 @@ def main():
         else:
             log.log_error("Input was not a valid type")
     except Exception as e:
+        print(e)
         err = "Exitted loop - Exception: " + str(e)
         raise ValueError(err)
         log.log_error(err)

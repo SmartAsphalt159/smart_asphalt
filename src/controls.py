@@ -44,6 +44,8 @@ class Controls(object):
         #self.carphys.update_path(self.lidar.get_position(self.obj),str,vel)
         #past_obj_pos = self.carphys.get_past_obj_pos()
         past_obj_pos = self.carphys.update_path(self.lidar.get_position(self.obj),str,vel)
+        print(past_obj_pos)
+        
         try:
             past_obj_pos.shape[0]
         except IndexError:
@@ -52,18 +54,21 @@ class Controls(object):
         if np.min(past_obj_pos[:,0]) > 0:   #takes smallest x value
             return self.lidar.get_position(self.obj)[1]
         else:
-            min = np.argmin(abs(past_obj_pos))
+            min_i = np.argmin(abs(past_obj_pos[:,0]))
+            print(f"past obj pos = {past_obj_pos}")
+            print(f"abs obj pos = {abs(past_obj_pos)}")
+            print(f"min index = {min_i}")
             try:
-                if past_obj_pos[min, 0] < 1:
-                    intersection = self.find_intersection(past_obj_pos[min, 0],past_obj_pos[min+1, 0])
+                if past_obj_pos[min_i, 0] < 1:
+                    intersection = self.find_intersection(past_obj_pos[min_i, 0],past_obj_pos[min_i+1, 0])
                 else:
-                    intersection = self.find_intersection(past_obj_pos[min, 0],past_obj_pos[min-1, 0])
+                    intersection = self.find_intersection(past_obj_pos[min_i, 0],past_obj_pos[min_i-1, 0])
 
                 s_error = intersection[1]
             except IndexError:
-                return past_obj_pos[min, :]
-
-            return s_error
+                return past_obj_pos[min_i, 0]
+            except Exception as e:
+                print(e)
 
     def find_intersection(self,a1,a2):    #from https://web.archive.org/web/20111108065352/https://www.cs.mun.ca/%7Erod/2500/notes/numpy-arrays/numpy-arrays.html
         b1 = [0,1]
@@ -100,7 +105,8 @@ class Controls(object):
                 except NoObject:
                     print("No object")
                     time.sleep(0.08)
-                except:
+                except Exception as e:
+                    print(e)
                     raise ValueError("Get lidar data")
             else:
                 time.sleep(0.01)
