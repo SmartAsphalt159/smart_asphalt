@@ -65,24 +65,28 @@ class Controls(object):
                     intersection = self.find_intersection(past_obj_pos[min_i, 0],past_obj_pos[min_i-1, 0])
 
                 s_error = intersection[1]
+                return s_error
             except IndexError:
                 return past_obj_pos[min_i, 0]
             except Exception as e:
+                print("The exception is here!")
                 print(e)
 
     def find_intersection(self,a1,a2):    #from https://web.archive.org/web/20111108065352/https://www.cs.mun.ca/%7Erod/2500/notes/numpy-arrays/numpy-arrays.html
         b1 = [0,1]
         b2 = [0,-1]
-        da = a2-a1
-        db = b2-b1
-        dp = a1-b1
+        a1 = np.array(a1)
+        a2 = np.array(a2)
+        da = a2+ -1*a1
+        db = b2+ -1*b1
+        dp = a1+ -1*b1
         dap = self.perp(da)
         denom = np.dot(dap,db)
         num = np.dot(dap,dp)
         return (num/denom)*db+b1
 
     def perp(self,a):
-        b = empty_like(a)
+        b = np.empty_like(a)
         b[0] = -a[1]
         b[1] = a[0]
         return b
@@ -224,7 +228,7 @@ class Lidar_Controls(Controls):
     def control_loop(self, speed):
         d_ref = self.initial_distance
         v_error, d_error, s_error = self.get_errors(speed, d_ref)
-
+        print(f"v_error = {v_error} d_error = {d_error} s_error = {s_error}")
         velocity_pid_input = d_error * self.velocity_Kp + v_error
         velocity_pid_output = self.velocity_pid_controller(velocity_pid_input)
         accel_cmd = self.convert_pid(velocity_pid_output, self.velocity_output_scaling, self.velocity_output_clamp)
