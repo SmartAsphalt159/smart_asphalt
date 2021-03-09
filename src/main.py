@@ -83,7 +83,7 @@ def main():
 
     #Encoder
     ep = encoder_producer(encoder_q, enc_channel, log, enc_timeout, sample_wait)
-    ec = encoder_consumer(encoder_q, None, log, enc_thread_timeout)
+    #ec = encoder_consumer(encoder_q, None, log, enc_thread_timeout)
 
     #Lidar (pull controls updates)
     lp = lidar_producer(lidar_q, lidar_channel, log, lid_timeout)
@@ -93,7 +93,7 @@ def main():
     np.start()
     #nc.start()
     ep.start()
-    ec.start()
+    #ec.start()
     lp.start()
     #lc.start()
 
@@ -107,7 +107,7 @@ def main():
             new_lidar = Lidar(False)
 
             carphys = CarPhysics()
-            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lp, mode = 1)
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, np, ep, lp, mode = 1)
 
             while True:
                 #TODO: double check
@@ -137,15 +137,15 @@ def main():
                 print(f"encoder_speed: {encoder_speed}")
                 then = time.time()
                 strg, accl = controller.control_loop(encoder_speed)
-                print("time to run control loop: ",time.time()-then)
-                #Broadcast after control system
-                print("Steering ",strg,"Accl ",accl)
+                print("time to run control loop: ", time.time()-then)
+                # Broadcast after control system
+                print("Steering ", strg, "Accl ", accl)
                 #sn.broadcast_data(accl, strg, encoder_speed, time.time) #TODO: idk if we need this here
         elif(c_type == "encoder_test"):
             new_lidar = Lidar(False)
             carphys = CarPhysics()
             nc = None
-            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lp, mode = 1)
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, np, ep, lp, mode=1)
             while True:
                 encoder_speed = controller.get_encoder_velocity()
                 #print(f"Speed = {encoder_speed}")
@@ -158,25 +158,24 @@ def main():
         err = "Exitted loop - Exception: " + str(e)
         raise ValueError(err)
         log.log_error(err)
+    # exited from loop
 
-
-    #exited from loop
-
-    #halt other threads, they should exit naturally
+    # halt other threads, they should exit naturally
     np.halt_thread()
-    nc.halt_thread()
+    # nc.halt_thread()
     ep.halt_thread()
-    ec.halt_thread()
+    # ec.halt_thread()
     lp.halt_thread()
-    lc.halt_thread()
+    # lc.halt_thread()
 
-    #gracefully exit program and reset vars
-    graceful_shutdown(log,gpio)
+    # gracefully exit program and reset vars
+    graceful_shutdown(log, gpio)
 
-def graceful_shutdown(log,gpio):
-    #TODO: Cayman, how do I use this function, is it initalized somewhere
+
+def graceful_shutdown(log, gpio):
     gpio.shut_down()
     log.log_info("Shutting down gracefully")
+
 
 if __name__ == "__main__":
     main()
