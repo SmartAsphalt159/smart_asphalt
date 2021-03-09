@@ -30,7 +30,9 @@ class Controls(object):
         return v_error
 
     def find_distance_error(self,d_ref):
-        d_error = d_ref - self.get_distance()
+        distance = self.get_distance()
+        d_error = -d_ref + distance
+        print(f"d_ref = {d_ref}  distance = {distance}")
         return d_error
 
     def find_steering_error(self, speed):
@@ -43,7 +45,7 @@ class Controls(object):
         str = self.last_steering
         vel = speed
         past_obj_pos = self.carphys.update_path(self.lidar.get_position(self.obj), str, vel)
-        print(past_obj_pos)
+        #print(past_obj_pos)
 
         try:
             past_obj_pos.shape[0]
@@ -53,10 +55,12 @@ class Controls(object):
         if np.min(past_obj_pos[:, 0]) > 0:   # takes smallest x value
             return self.lidar.get_position(self.obj)[1]
         else:
+            #remove this to enable car physics
+            return self.lidar.get_position(self.obj)[1]
             min_i = np.argmin(abs(past_obj_pos[:, 0]))
-            print(f"past obj pos = {past_obj_pos}")
-            print(f"abs obj pos = {abs(past_obj_pos)}")
-            print(f"min index = {min_i}")
+            #print(f"past obj pos = {past_obj_pos}")
+            #print(f"abs obj pos = {abs(past_obj_pos)}")
+            #print(f"min index = {min_i}")
             try:
                 if past_obj_pos[min_i, 0] < 1:
                     intersection = self.find_intersection(past_obj_pos[min_i, 0], past_obj_pos[min_i+1, 0])
@@ -199,7 +203,7 @@ class Lidar_Controls(Controls):
         self.velocity_pid_length = 20
         self.velocity_pos_ref = 200 #mm reference position
 
-        self.velocity_output_clamp = (-5,10)  #clamps output between these two values
+        self.velocity_output_clamp = (-1,4)  #clamps output between these two values
         self.velocity_output_scaling = 1/100
 
         self.steering_P = sp

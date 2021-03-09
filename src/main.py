@@ -64,12 +64,12 @@ def main():
 
     #CONTROL VARS
     #Velocity constants
-    vp = 100
+    vp = 1
     vi = 0
     vd = 0
     vk = 1
     #Steering constants
-    sp = 10
+    sp = 1
     si = 0
     sd = 0
 
@@ -129,7 +129,7 @@ def main():
             new_lidar = Lidar(False)
             time.sleep(0.1)
             carphys = CarPhysics()
-            controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ec, lp)
+            controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
             while True:
                 controller.get_lidar_data()
                 print("got lidar")
