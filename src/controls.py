@@ -1,11 +1,12 @@
 import time
 import numpy as np
 
+
 class NoObject(Exception):
     pass
 
 class Controls(object):
-    def __init__(self, lidar, gpio, carphys ,encoder_consumer, lidar_consumer):
+    def __init__(self, lidar, gpio, carphys, encoder_consumer, lidar_consumer):
         self.lidar = lidar
         self.gpio = gpio
         self.encoder_consumer = encoder_consumer
@@ -14,12 +15,12 @@ class Controls(object):
         self.line = None
         self.obj = None
 
-    def find_velocity_error(self,mode=0):   #mode 0: lidar // mode 1: encoders over networking
+    def find_velocity_error(self, mode=0):   # mode 0: lidar // mode 1: encoders over networking
         if mode == 0:
             if self.obj.velocity:
                 v_error = np.sign(self.obj.velocity[0])*(self.obj.velocity[0]**2+self.obj.velocity[0]**2)**0.5
             else:
-                #TODO: Add condition for finding velocity error with encoders over network
+                # TODO: Add condition for finding velocity error with encoders over network
                 v_error = 0
         else:
             my_enc_vel = self.get_encoder_velocity()
@@ -41,28 +42,26 @@ class Controls(object):
         """
         str = self.last_steering
         vel = speed
-        #self.carphys.update_path(self.lidar.get_position(self.obj),str,vel)
-        #past_obj_pos = self.carphys.get_past_obj_pos()
-        past_obj_pos = self.carphys.update_path(self.lidar.get_position(self.obj),str,vel)
+        past_obj_pos = self.carphys.update_path(self.lidar.get_position(self.obj), str, vel)
         print(past_obj_pos)
-        
+
         try:
             past_obj_pos.shape[0]
         except IndexError:
             print("index err")
             return self.lidar.get_position(self.obj)[1]
-        if np.min(past_obj_pos[:,0]) > 0:   #takes smallest x value
+        if np.min(past_obj_pos[:, 0]) > 0:   # takes smallest x value
             return self.lidar.get_position(self.obj)[1]
         else:
-            min_i = np.argmin(abs(past_obj_pos[:,0]))
+            min_i = np.argmin(abs(past_obj_pos[:, 0]))
             print(f"past obj pos = {past_obj_pos}")
             print(f"abs obj pos = {abs(past_obj_pos)}")
             print(f"min index = {min_i}")
             try:
                 if past_obj_pos[min_i, 0] < 1:
-                    intersection = self.find_intersection(past_obj_pos[min_i, 0],past_obj_pos[min_i+1, 0])
+                    intersection = self.find_intersection(past_obj_pos[min_i, 0], past_obj_pos[min_i+1, 0])
                 else:
-                    intersection = self.find_intersection(past_obj_pos[min_i, 0],past_obj_pos[min_i-1, 0])
+                    intersection = self.find_intersection(past_obj_pos[min_i, 0], past_obj_pos[min_i-1, 0])
 
                 s_error = intersection[1]
                 return s_error
@@ -72,14 +71,14 @@ class Controls(object):
                 print("The exception is here!")
                 print(e)
 
-    def find_intersection(self,a1,a2):    #from https://web.archive.org/web/20111108065352/https://www.cs.mun.ca/%7Erod/2500/notes/numpy-arrays/numpy-arrays.html
-        b1 = [0,1]
-        b2 = [0,-1]
+    def find_intersection(self, a1, a2):    #from https://web.archive.org/web/20111108065352/https://www.cs.mun.ca/%7Erod/2500/notes/numpy-arrays/numpy-arrays.html
+        b1 = [0, 1]
+        b2 = [0, -1]
         a1 = np.array(a1)
         a2 = np.array(a2)
-        da = a2+ -1*a1
-        db = b2+ -1*b1
-        dp = a1+ -1*b1
+        da = a2 + -1 * a1
+        db = b2 + -1 * b1
+        dp = a1 + -1 * b1
         dap = self.perp(da)
         denom = np.dot(dap,db)
         num = np.dot(dap,dp)
@@ -92,7 +91,6 @@ class Controls(object):
         return b
 
     def get_lidar_data(self):
-        #TODO: double checki
         valid_read = False
         while not valid_read:
             scan = self.lidar_consumer.get_scan()
@@ -121,7 +119,6 @@ class Controls(object):
         return distance
 
     def get_encoder_velocity(self):
-        #TODO: double check
         encoder_velocity = self.encoder_consumer.get_speed()
         return encoder_velocity
 
@@ -130,11 +127,10 @@ class Controls(object):
         return relative_lidar_velocity
 
 
-
 class Dumb_Networking_Controls(Controls):
     def __init__(self, lidar, gpio, carphys, network_consumer, encoder_consumer, lidar_consumer, mode=0):
         super(Dumb_Networking_Controls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer)    #runs init of superclass
-        self.dumb_networking_mode = mode    #mode 0 is chain mode// mode 1 is leader mode
+        self.dumb_networking_mode = mode    # mode 0 is chain mode// mode 1 is leader mode
         self.accel_cmd = 0
         self.steering_list = [0]
         if mode == 0:
@@ -142,9 +138,9 @@ class Dumb_Networking_Controls(Controls):
             self.get_lidar_data()
             self.initial_distance = self.get_distance()
         else:
-            self.initial_distance = 500     #depends on car number and initial distance behind lead car
-            #in follow the leader mode
-            #get networking from lead car
+            self.initial_distance = 500     # depends on car number and initial distance behind lead car
+            # in follow the leader mode
+            # get networking from lead car
 
     def control_loop(self, enc_vel):
         self.transmission_delay = self.get_transmission_delay()

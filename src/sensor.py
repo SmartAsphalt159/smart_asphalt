@@ -12,7 +12,6 @@ class GPIO_Interaction():
         self.motor_ch = motor_ch
         GPIO.setmode(GPIO.BOARD)
         GPIO.setwarnings(False)
-        GPIO.setup(self.enc_ch, GPIO.IN)
         GPIO.setup((self.servo_ch, self.motor_ch),GPIO.OUT)
         self.servo_pwm = GPIO.PWM(self.servo_ch, 50)
         self.motor_pwm = GPIO.PWM(self.motor_ch, 50)
@@ -50,31 +49,29 @@ class GPIO_Interaction():
 
 
 class Encoder():
-    def __init__(self, channel, mag_num=2, tire_r=350):
+    def __init__(self, channel):
         print("Initting encoder")
-        self.mag_num = mag_num
-        self.channel = channel
         self.r = tire_r
         self.tally = 0
         self.speed = 0
+        self.speed_array = []
         self.speed_read = True
-        self.last_time = time.time()
-        GPIO.add_event_detect(self.channel, GPIO.BOTH,callback=self.on_edge)
-
-    def on_edge(self,channel):
-        self.tally += 1
 
     def sample_speed(self, tally, delta_ms):
         self.tally = tally
-         
-        #TODO: Call on regular intervals in producer consumer
         rps = self.tally/(self.mag_num*(delta_ms/1000))
         speed = 2*3.1415*rps*self.r
-        self.speed = speed
+        self.speed_array.append((speed, delta_ms/1000))
         self.speed_read = False
 
     def get_speed(self):
-        #print("get speed in enc_class")
-        #TODO: Should output from producer consumer
+        total_t = 0
+        d = 0
+        for speed, d_time in self.speed_array:
+            total_t += d_time
+            d += speed*d_time
+
+        avg_speed = d/total_t
+        speed_array = []
         self.speed_read = True
-        return self.speed
+        return avg_speed
