@@ -277,6 +277,7 @@ class Lidar_Controls(Controls):
 
     def proportional(self, pid_input, P):
         p_val = pid_input * P
+        print(f"P = {p_val}")
         return p_val
 
     def integral(self, pid_list, I):
@@ -290,6 +291,7 @@ class Lidar_Controls(Controls):
             sum += pid * (t - pid_list[x+1][1])   #calculate deltat * pid val
 
         i_val = sum * modifier
+        print(f"i = {i_val}")
         return i_val
 
     def derivative(self, pid_list, D):
@@ -300,6 +302,7 @@ class Lidar_Controls(Controls):
         d_val = (pid_list[-1][0]-pid_list[-2][0])/(pid_list[-1][1]-pid_list[-2][1])
         d_val *= D
 
+        print(f"d = {d_val}")
         return d_val
 
     """convert value from PID controller to -10->10 value in sensor"""

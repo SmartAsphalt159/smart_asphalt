@@ -64,7 +64,7 @@ def main():
 
     #CONTROL VARS
     #Velocity constants
-    vp = 1
+    vp = 100
     vi = 0
     vd = 0
     vk = 1
@@ -134,7 +134,7 @@ def main():
                 controller.get_lidar_data()
                 print("got lidar")
                 encoder_speed = controller.get_encoder_velocity()
-                print(f"encoder_speed: {encoder_speed}")
+                #print(f"encoder_speed: {encoder_speed}")
                 then = time.time()
                 strg, accl = controller.control_loop(encoder_speed)
                 print("time to run control loop: ",time.time()-then)

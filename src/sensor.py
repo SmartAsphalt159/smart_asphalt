@@ -33,7 +33,7 @@ class GPIO_Interaction():
             return val*3/20 + 7.5
 
     def motor_format(self, val): #-10 => 8.5 10=>6
-        offset = 3.3#0.781
+        offset = 0.781#0.781
         val = val+offset
         if val < -10:
             return 9
