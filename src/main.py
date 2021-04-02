@@ -1,75 +1,179 @@
-#/usr/bin/python3
+#!/usr/bin/python3
 
 """
 Main file for smart aspahlt's platooning code
-Last revision: December 26th, 2020
+Last revision: Feburary 17th, 2020
 """
 
-import socket
+
 import sys
-import time
 import threading
 import network
-from logger import Logger
-from synch import inter_thread_queue
+import time
+from sensor import GPIO_Interaction
+from queue import Queue
+from logger import Sys_logger
+from synch import (network_producer, network_consumer, encoder_producer, encoder_consumer,
+    lidar_producer, lidar_consumer)
+from controls import *
+from lidar import Lidar
+from carphysics import CarPhysics
 
 def main():
-    
-    ### INIT NETWORK ###
 
-    #get port numbers 
-    if(len(sys.argv) != 3):                                        #checking argument validity 
-        print("Incorrect number of arguments")
-        print("Must specify index for sending and receiving port")
-        sys.exit()
+    #Dumb, smart, and lidar
+    #add arugments
+    if(len(sys.argv) != 2):
+        print("Usage is: python3 main <type>")
+        print("Optional types: dumb, smart, lidar")
+        exit(0)
+    else:
+        #type of control
+        c_type = sys.argv[1]
 
-    #init sockets
-    recskt, sndskt = network.net_init(sys.argv[1], sys.argv[2])
+    #INIT LOGGER
+    log = Sys_logger("Application")
 
-    #create threads for broadcasting and listening 
-    list_thread = threading.Thread(target=network.listen_data, args=([recskt]))
-    send_thread = threading.Thread(target=network.broadcast_data, args=([sndskt]))
+    #INIT QUEUES (not length cap)
+    net_q = Queue(0)
+    encoder_q = Queue(0)
+    lidar_q = Queue(0)
 
-    #start threads
-    send_thread.start()
-    list_thread.start()
+    #NETWORKING VARS
+    recvport = 1
+    sendport = 2
+    timeout = 2  # seconds
+    net_thread_timeout = 5
+    sn = network.send_network(sendport)
 
-    ### NETWORK INIT COMPLETE ### 
+    # GPIO vars
+    motor_ch = 32
+    servo_ch = 33
 
-    ### THREAD COMMUNICATIONS INIT  ### 
-    """initailize thread communication queue with infinite queue length and binary semaphore """
-    #TODO: Decide whether lidar needs a separate queue due to bandwidth + speed 
-    #network and controls queue
-    net_cont_synch = inter_thread_queue(0, 1) 
+    # ENCODER VARS
+    # TODO: update to true value
+    enc_channel = 19
+    enc_timeout = 2
+    sample_wait = 0.1
+    enc_thread_timeout = 5
 
-    #local sensors and control queue
-    sensor_cont_synch = inter_thread_queue(0, 1) 
+    # LIDAR VARS
+    lidar_channel = "/dev/ttyUSB0"
+    lid_timeout = 10
+    lid_thread_timeout = 5
 
-    ### THREAD COMMUNUCATIONS INIT COMPLETE ### 
+    #CONTROL VARS
+    #Velocity constants
+    vp = 1
+    vi = 0
+    vd = 0
+    vk = 1
+    #Steering constants
+    sp = 1
+    si = 0
+    sd = 0
 
-    ### DATA LOGGING INIT ### 
+    gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
 
-    net = Logger("network")
-    lidar = Logger("lidar")
-    net_data = None
-    lidar_data = None
-    
-    ### DATA LOGGING INIT COMPLETE ###
+    #INIT PRODCUER CONSUMERS
 
-    ### INIT CONTROLS ### TODO Cayman / Adrian 
-    ### INIT CONTROLS COMPLETE ###
+    #Network
+    np = network_producer(net_q, recvport, log, timeout)
+    nc = network_consumer(net_q, None, log, net_thread_timeout)
 
-    ### INIT SENSORS ### TODO Cayman / Andrew 
-    ### INIT SENSORS COMPLETE ###
+    #Encoder
+    ep = encoder_producer(encoder_q, enc_channel, log, enc_timeout, sample_wait)
+    ec = encoder_consumer(encoder_q, None, log, enc_thread_timeout)
 
-    ### RUNTIME COMPONENT ###
-    while(1):
+    #Lidar (pull controls updates)
+    lp = lidar_producer(lidar_q, lidar_channel, log, lid_timeout)
+    lc = lidar_consumer(lidar_q, None, log, lid_thread_timeout)
+
+    #start the producer consumer threads
+    np.start()
+    nc.start()
+    ep.start()
+    ec.start()
+    lp.start()
+    lc.start()
+
+    try:
+        #update local objects (done by threads)
+
+        #Call control system
+        #TODO: Update to a better design pattern, this is pretty rough
+        if(c_type == "dumb"):
+            #call dumb contorl system
+            new_lidar = Lidar(False)
+
+            carphys = CarPhysics()
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lp, mode = 1)
+
+            while True:
+                #TODO: double check
+                encoder_speed = controller.get_encoder_velocity()
+                packet = nc.get_packet()
+                controller.get_newest_steering_cmd(packet.steering)
+                controller.get_newest_accel_cmd(packet.throttle)
+                strg, accl = controller.control_loop(encoder_speed)
+                #Broadcast after control system
+                sn.broadcast_data(accl, strg, encoder_speed, time.time())
+        #Uncomment when written
+        #TODO: when smart networking is implemented
+        #elif(c_type == "smart"):
+            #call smart control system
+            #TODO: once it is written
+
+        elif(c_type == "lidar"):
+            #call lidar control system
+            new_lidar = Lidar(False)
+            time.sleep(0.1)
+            carphys = CarPhysics()
+            controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ec, lp)
+            while True:
+                controller.get_lidar_data()
+
+                encoder_speed = controller.get_encoder_velocity()
+                then = time.time()
+                strg, accl = controller.control_loop(encoder_speed)
+                print("time to run control loop: ",time.time()-then)
+                #Broadcast after control system
+                print("Steering ",strg,"Accl ",accl)
+                #sn.broadcast_data(accl, strg, encoder_speed, time.time) #TODO: idk if we need this here
+        elif(c_type == "encoder_test"):
+            new_lidar = Lidar(False)
+            carphys = CarPhysics()
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lc, mode = 1)
+            while True:
+                encoder_speed = controller.get_encoder_velocity()
+                print(f"Speed = {encoder_speed}")
+                time.sleep(0.01)
+
+        else:
+            log.log_error("Input was not a valid type")
+    except Exception as e:
+        err = "Exitted loop - Exception: " + str(e)
+        raise ValueError(err)
+        log.log_error(err)
 
 
-        #update dataframes with data
-        net.update_df(net_data)
-        lidar.update_df(lidar_data)
+    #exited from loop
 
+    #halt other threads, they should exit naturally
+    np.halt_thread()
+    nc.halt_thread()
+    ep.halt_thread()
+    ec.halt_thread()
+    lp.halt_thread()
+    lc.halt_thread()
+
+    #gracefully exit program and reset vars
+    graceful_shutdown(log,gpio)
+
+def graceful_shutdown(log,gpio):
+    #TODO: Cayman, how do I use this function, is it initalized somewhere
+    gpio.shut_down()
+    log.log_info("Shutting down gracefully")
 
 if __name__ == "__main__":
     main()

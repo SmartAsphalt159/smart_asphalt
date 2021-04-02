@@ -1,0 +1,21 @@
+# 3 basic commands,
+# steer (10 to (-10)) ((+)right and (-)left) seconds (duration)
+# wait 5 (seconds)
+# throttle 1 (0 - 1 (max))
+# '#' Comment will ignore a line
+
+# Move Forward
+throttle 0.5
+wait 1
+# Turn right
+<<<<<<< HEAD
+throttle 0
+=======
+steer 10
+wait 1
+# Turn while moving
+steer 0
+throttle 0.5
+wait 1
+>>>>>>> 7073bc5b851257a08b121c3cc64ed2a6fda3d1e3
+# Done

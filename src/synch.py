@@ -1,10 +1,9 @@
 #!/usr/bin/python3
 """
 Synchronization file for smart aspahlt's platooning code
-Last revision: January 21st, 2020
+Last revision: Feb 17th, 2020
 """
 
-import lidar
 import threading
 import timing
 import network as net
@@ -14,44 +13,38 @@ from network import recv_network, send_network
 from logger import Sys_logger, Data_logger
 from Packet import Packet
 from sensor import Encoder, GPIO_Interaction
+from lidar import Lidar
 
 class queue_skeleton(threading.Thread):
 
     """ Constructor """
-    def __init__(self, inque, outque, lock, logger, timeout):
+    def __init__(self, inque, outque, logger, timeout):
         threading.Thread.__init__(self)
         self.inque = inque
         self.outque = outque
-        self.lock = lock
         self.logger = logger
         self.timeout = timeout
 
     """ Protected Enqueue """
     def enqueue(self, data):
-        self.lock.acquire()
 
         try:
             self.outque.put(data)
-        except: 
+        except:
             self.logger.log_error("Failed to enqueue data")
-            self.lock.release()
             return -1
 
-        self.lock.release()
         return 0
 
     """ Protected Dequeue """
     def dequeue(self):
-        self.lock.acquire()
-        try: 
+        try:
             data = self.inque.get(timeout=self.timeout)
             self.inque.task_done()
         except:
             self.logger.log_error("Failed to dequeue data")
-            self.lock.release()
             return -1
 
-        self.lock.release()
         return data
 
     """ Empty wrapper """
@@ -61,12 +54,12 @@ class queue_skeleton(threading.Thread):
     """ Full wrapper """
     def check_full(self):
         return self.outque.full()
-    
+
 class network_producer(queue_skeleton, recv_network):
 
     """Constructor"""
-    def __init__(self, out_que, lock, port, logger, timeout):
-        queue_skeleton.__init__(self, None, out_que, lock, logger, timeout)
+    def __init__(self, out_que, port, logger, timeout):
+        queue_skeleton.__init__(self, None, out_que, logger, timeout)
         recv_network.__init__(self, port)
         self.running = True
 
@@ -77,110 +70,123 @@ class network_producer(queue_skeleton, recv_network):
     def run(self):
         while(self.running):
             try:
-                #Setting timeout of 3 seconds 
-                temp, _ = self.listen_data(3)
+                #Setting timeout of 1 second
+                temp, _ = self.listen_data(0.1)
                 if(temp == -1):
                     self.logger.log_error("Socket timeout occured")
-                self.enqueue(temp)
-                #print("Producer outque size: ", self.outque.qsize())
+                else:
+                    self.enqueue(temp)
             except:
-                if(self.outque.check_full()):
+                if(self.check_full()):
                     self.logger.log_error("Network Producer output queue is full")
 
 class network_consumer(queue_skeleton):
 
     """Constructor"""
-    def __init__(self, in_que, out_que, lock, logger, thr_timeout):
-        queue_skeleton.__init__(self, in_que, out_que, lock, logger, thr_timeout)
+    def __init__(self, in_que, out_que, logger, thr_timeout):
+        queue_skeleton.__init__(self, in_que, out_que, logger, thr_timeout)
         self.running = True
         self.timeout = thr_timeout
 
     def halt_thread(self):
         self.running = False
 
+    def get_packet(self):
+        return self.packet
+
     def run(self):
         while(self.running):
 
             #verify that queue isn't empty
-            if(self.inque.check_empty()):
-                timing.sleep_for(self.timeout)
+            #if(self.inque.check_empty()):
+            #    timing.sleep_for(self.timeout)
 
-            if(not self.inque.check_empty()):
+            if(not self.check_empty()):
                 try:
-                    p = self.dequeue()
-                    #net.printPkt(p, 7)
-                    self.enqueue(p)
+                    self.packet = self.dequeue()
                 except:
                     self.logger.log_error("Could not deque packet")
             #timeout becasue there is no data in the queue, will be respawned later
-            else:
-                return 
+#            else:
+#                return
 
 class encoder_producer(queue_skeleton, Encoder):
 
     """Constructor"""
-    def __init__(self, out_que, lock, channel, logger, timeout):
-        queue_skeleton.__init__(self, None, out_que, lock, logger, timeout)
-        Encoder.__init__(self, channel) 
+    def __init__(self, out_que, channel, logger, timeout, sample_wait):
+        queue_skeleton.__init__(self, None, out_que, logger, timeout)
+        Encoder.__init__(self, channel)
         self.running = True
+        self.sample_wait = sample_wait
 
     def halt_thread(self):
         self.running = False
 
-    #enqueue encoder values 
+    #enqueue encoder values
     def run(self):
         while(self.running):
             try:
-                val = self.get_speed()
-                self.enqueue(val)
+                #update speed to latest value
+                self.sample_speed()
+                #get latest value
+                speed = self.get_speed()
+                self.enqueue(speed)
             except:
                 self.logger.log_error("Failed to read encoder value")
+
+        #creating sampling delay
+        #TODO: verify if millisecond / microsend time is necessary
+        timing.sleep_for(self.sample_wait)
 
 class encoder_consumer(queue_skeleton):
 
     """Constructor"""
-    def __init__(self, in_que, out_que, lock, logger, thr_timeout):
-        queue_skeleton.__init__(self, in_que, out_que, lock, logger, thr_timeout)
+    def __init__(self, in_que, out_que, logger, thr_timeout):
+        queue_skeleton.__init__(self, in_que, out_que, logger, thr_timeout)
         self.running = True
         self.timeout = thr_timeout
 
     def halt_thread(self):
         self.running = False
 
+    def get_speed(self):
+        return self.speed
+
     def run(self):
         while(self.running):
 
             #verify that queue isn't empty
-            if(self.inque.check_empty()):
-                timing.sleep_for(self.timeout)
+            #if(self.inque.check_empty()):
+            #    timing.sleep_for(self.timeout)
 
-            if(not self.inque.check_empty()):
+            if(not self.check_empty()):
                 try:
-                    val = self.dequeue()
-                    self.enqueue(val)
+                    self.speed = self.dequeue()
                 except:
                     self.logger.log_error("Could not deque encoder data")
             #timeout becasue there is no data in the queue, will be respawned later
-            else:
-                return 
-              
+            #else:
+            #    return
+
 
 class lidar_producer(queue_skeleton, Lidar):
 
     """Constructor"""
-    def __init__(self, out_que, lock, channel, logger, timeout):
-        queue_skeleton.__init__(self, None, out_que, lock, logger, timeout)
-        Lidar.__init__(self) 
+    def __init__(self, out_que, channel, logger, timeout):
+        queue_skeleton.__init__(self, None, out_que, logger, timeout)
+        Lidar.__init__(self, True)
         self.running = True
 
     def halt_thread(self):
         self.running = False
 
-    #enqueue encoder values 
+    #enqueue encoder values
     def run(self):
+        #initiate the scan
+        self.start_scan()
         while(self.running):
             try:
-                scan = self.do_scan()
+                scan = self.get_scan()
                 self.enqueue(scan)
             except:
                 self.logger.log_error("Failed to read encoder value")
@@ -188,27 +194,31 @@ class lidar_producer(queue_skeleton, Lidar):
 class lidar_consumer(queue_skeleton, Lidar):
 
     """Constructor"""
-    def __init__(self, in_que, out_que, lock, logger, thr_timeout):
-        queue_skeleton.__init__(self, in_que, out_que, lock, logger, thr_timeout)
+    def __init__(self, in_que, out_que, logger, thr_timeout):
+        queue_skeleton.__init__(self, in_que, out_que, logger, thr_timeout)
         self.running = True
         self.timeout = thr_timeout
 
     def halt_thread(self):
         self.running = False
 
+    #return the latest scan
+    def get_scan(self):
+        return self.scan
+
     def run(self):
         while(self.running):
 
             #verify that queue isn't empty
-            if(self.inque.check_empty()):
-                timing.sleep_for(self.timeout)
+            #if(self.inque.check_empty()):
+            #    timing.sleep_for(self.timeout)
 
-            if(not self.inque.check_empty()):
+            if(not self.check_empty()):
                 try:
-                    scan = self.dequeue()
-                    #do something with the scan
+                    #set scan to local variable
+                    self.scan = self.dequeue()
                 except:
-                    self.logger.log_error("Could not deque encoder data")
+                    self.logger.log_error("Could not deque lidar scan")
             #timeout becasue there is no data in the queue, will be respawned later
-            else:
-                return 
+            #else:
+            #    return

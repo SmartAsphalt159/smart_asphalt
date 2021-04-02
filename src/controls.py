@@ -1,211 +1,292 @@
 import time
-import Sensors
 
-class ThrottleController():
-    def __init__(self, p = 1, i = 1, d = 1, k = 1, sensors, motor):
-        self.P = p
-        self.I = i
-        self.D = d
-        self.Kp = k
-        self.pwm_scale =  1000  #pulse width(ms)/speed(m/s)
-        self._pid_list = [] #add touple of (pid_val,time) for integration
-        self._pid_length = 20
-        self.sensors = sensors  #object that interacts with the sensors
-        self.motor = motor  #object that interacts and commands motor
-        self.pos_ref = 20 #cm reference position
-        self.operational_sensors = (True, True, True) #Encoder , lidar, comms at first assume all true
+class Controls(object):
+    def __init__(self, lidar, gpio, encoder_consumer, carphys, lidar_consumer):
+        self.lidar = lidar
+        self.gpio = gpio
+        self.encoder_consumer = encoder_consumer
+        self.lidar_consumer = lidar_consumer
+        self.carphys = carphys
+        self.line = None
+        self.obj = None
 
-    def control_loop(self):
-        self.operational_sensors = self.sensors.status
-        if all(self.operational_sensors):   #determine mode of sensor collection
+    def find_velocity_error(self,mode=0):   #mode 0: lidar // mode 1: encoders over networking
+        if mode == 0:
+            if self.obj.velocity:
+                v_error = np.sign(self.obj.velocity[0])*(self.obj.velocity[0]**2+self.obj.velocity[0]**2)**0.5
+            else:
+                #TODO: Add condition for finding velocity error with encoders over network
+                v_error = 0
+        else:
+            my_enc_vel = self.get_encoder_velocity()
+            lead_enc_vel = 0   #get this from communications
+            v_error = lead_enc_vel - my_enc_vel
 
-        velocity = get_velocity_somewhere() #pseudo code
-        positional_error = get_positional_error()
+        return v_error
 
-        pid_input = positional_error * self.Kp + velocity
-        pid_output = self.pid_controller(pid_input)
-        pulse_width = self.pid_to_pwm(pid_output)
-        self.motor.set_motor_to(pulse_width)
+    def find_distance_error(self,d_ref):
+        d_error = d_ref - self.get_distance()
+        return d_error
 
-    def update_ref(self):
-        self.pos_ref = get_comm_ref() #pseudocode
+    def find_steering_error(self, speed):
+        """
+        +x is forward
+        +y is left
+        if s_error > 0 turn left
+        if past object list not long enough just use current y position of car.
+        """
+        str = self.last_steering
+        vel = speed
+        carphys.update_path(self.lidar.get_position(self.obj),str,vel)
+        past_obj_pos = carphys.get_past_obj_pos()
+        if np.min(past_obj_pos[:,0]) < 0:   #takes smallest x value
+            return lidar.get_position(obj)[1]
+        else:
+            min = np.argmin(abs(past_obj_pos))
+            try:
+                if past_obj_pos[min, 0] < 1:
+                    intersection = self.find_intersection(past_obj_pos[min, 0],past_obj_pos[min+1, 0])
+                else:
+                    intersection = self.find_intersection(past_obj_pos[min, 0],past_obj_pos[min-1, 0])
+
+                s_error = intersection[1]
+            except IndexError:
+                return past_obj_pos[min, :]
+
+            return s_error
+
+    def find_intersection(self,a1,a2):    #from https://web.archive.org/web/20111108065352/https://www.cs.mun.ca/%7Erod/2500/notes/numpy-arrays/numpy-arrays.html
+        b1 = [0,1]
+        b2 = [0,-1]
+        da = a2-a1
+        db = b2-b1
+        dp = a1-b1
+        dap = self.perp(da)
+        denom = np.dot(dap,db)
+        num = np.dot(dap,dp)
+        return (num/denom)*db+b1
+
+    def perp(self,a):
+        b = empty_like(a)
+        b[0] = -a[1]
+        b[1] = a[0]
+        return b
+
+    def get_lidar_data(self):
+        #TODO: double check
+        scan = self.lidar_consumer.get_scan()
+        obj,line = lidar.scan_break_objects_lines(scan)
+        self.obj = obj
+        self.line = line
+
+    def get_distance(self):
+        position = self.lidar.get_position(self.obj)
+        distance = (position[0]**2+position[1]**2)**0.5
+        return distance
+
+    def get_encoder_velocity(self):
+        #TODO: double check
+        encoder_velocity = self.encoder_consumer.get_speed()
+        return encoder_velocity
+
+    def get_relative_lidar_velocity(self):
+        relative_lidar_velocity = self.obj.velocity
+        return relative_lidar_velocity
 
 
-    def get_positional_error(self):
+
+class Dumb_Networking_Controls(Controls):
+    def __init__(self, lidar, gpio, carphys, network_consumer, encoder_consumer, lidar_consumer, mode=0):
+        super(Dumb_Networking_Controls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer)    #runs init of superclass
+        self.dumb_networking_mode = mode    #mode 0 is chain mode// mode 1 is leader mode
+        self.accel_cmd = 0
+        self.steering_list = [0]
+        if mode == 0:
+            #in chain mode
+            self.get_lidar_data()
+            self.initial_distance = self.get_distance()
+        else:
+            self.initial_distance = 500     #depends on car number and initial distance behind lead car
+            #in follow the leader mode
+            #get networking from lead car
+
+    def control_loop(self, enc_vel):
+        self.transmission_delay = self.get_transmission_delay()
+
+        delay = self.initial_distance/enc_vel + self.transmission_delay
+        delayed_time = time.time-delay
+
+        accel_cmd = self.accel_cmd
+        steering_cmd = self.get_delayed_steering_cmd(delayed_time)
+
+        self.gpio.set_servo_pwm(steering_cmd)
+        self.gpio.set_motor_pwm(accel_cmd)
+        return steering_cmd, accel_cmd
+
+    def get_transmission_delay(self):
+        #need to change this
+        transmission_delay = 0.01
+        return transmission_delay
+
+    def get_newest_accel_cmd(self, cmd):
+        self.accel_cmd = cmd #newest data
+
+    def get_newest_steering_cmd(self, cmd):
+        timestamp = time.time()
+        self.steering_list.append((timestamp,cmd))    #newest data
+        if len(self.steering_list) > 50:
+            del self.steering_list[0]
+
+    def get_delayed_steering_cmd(self,delayed_time):
+        for i, j in enumerate(self.steering_list):
+            if delayed_time > j[0]:
+                steering_cmd = j[1]
+                del self.steering_list[:i]
+                return steering_cmd
+        return 0
+
+    """
+    Copy velocity of lead vehicles
+    Delay steering by velocity of my car divided by initial distance - transmission time_last
+        in order to make steering commands at the same position as the lead vehicles
+
+    If mode is chain find initial distance with lidar. Else pre set it manually
+    In control loop do above
+    """
+
+class Lidar_Controls(Controls):
+    def __init__(self, vp, vi, vd, vk, sp, si, sd, lidar, gpio, carphys, encoder_consumer, lidar_consumer, ref=0):
+        super(Lidar_Controls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer)    #runs init of superclass
+
+        self.velocity_P = vp
+        self.velocity_I = vi
+        self.velocity_D = vd
+        self.velocity_Kp = vk
+
+        self.velocity_pid_list = [] #add touple of (pid_val,time) for integration
+        self.velocity_pid_length = 20
+        self.velocity_pos_ref = 200 #mm reference position
+
+        self.velocity_output_clamp = (-5,10)  #clamps output between these two values
+        self.velocity_output_scaling = 1/100
+
+        self.steering_P = sp
+        self.steering_I = si
+        self.steering_D = sd
+
+        self.steering_pid_list = [] #add touple of (pid_val,time) for integration
+        self.steering_pid_length = 20
+
+        self.steering_output_clamp = (-10,10)  #clamps output between these two values
+        self.steering_output_scaling = 1/100
+
+        self.last_steering = 0
+
+        if ref==0:
+            self.get_lidar_data()
+            self.initial_distance = self.get_distance()
+
+    def control_loop(self, speed):
+        v_error, d_error, s_error = self.get_errors(speed)
+
+        velocity_pid_input = d_error * self.velocity_Kp + v_error
+        velocity_pid_output = self.velocity_pid_controller(velocity_pid_input)
+        accel_cmd = self.convert_pid(velocity_pid_output, self.velocity_output_scaling, self.velocity_output_clamp)
+        self.gpio.set_motor_pwm(accel_cmd)
+
+        steering_pid_input = s_error
+        steering_pid_output = self.steering_pid_controller(steering_pid_input)
+        steering_cmd = self.convert_pid(steering_pid_output, self.steering_output_scaling, self.steering_output_clamp)
+        self.gpio.set_servo_pwm(steering_cmd)
+        self.last_steering = steering_cmd
+        return steering_cmd, accel_cmd
 
 
-        if()
-        distance = get_lead_car_delta_distance() #pseudo code from lidar
+    def get_errors():
+        v_error = self.find_velocity_error()
+        d_error = self.find_distance_error()
+        s_error = self.find_steering_error(speed)
 
+        return v_error, d_error, s_error
 
-        return perror
-
-    """Following methods are for PID controller"""
-    def pid_controller(pid_input):
+    def velocity_pid_controller(pid_input):
         time = time.time()
-        _pid_list.append((pid_input,time))
-        if len(_pid_list) > self._pid_length:
-            del _pid_list[0]
+        self.velocity_pid_list.append((pid_input,time))
 
-        pid_val = self.proportional(pid_input) +
-                  self.integral() +
-                  self.derivative()
+        if len(self.velocity_pid_list) > self.velocity_pid_length:
+            del self.velocity_pid_list[0]
+
+        pid_val = self.proportional(pid_input, self.velocity_P) + \
+                  self.integral(self.velocity_pid_list, self.velocity_I) + \
+                  self.derivative(self.velocity_pid_list, self.velocity_D)
 
         return pid_val
 
-    """find proportional value of PID"""
-    def proportional(self, pid_input):
-        p_val = pid_input * self.P
+    def steering_pid_controller(pid_input):
+        time = time.time()
+        self.steering_pid_list.append((pid_input,time))
+
+        if len(self.steering_pid_list) > self.steering_pid_length:
+            del self.steering_pid_list[0]
+
+        pid_val = self.proportional(pid_input, self.steering_P) + \
+                  self.integral(self.steering_pid_list, self.steering_I) + \
+                  self.derivative(self.steering_pid_list, self.steering_D)
+
+        return pid_val
+
+    def proportional(self, pid_input, P):
+        p_val = pid_input * P
         return p_val
 
-    """find integral value of PID"""
-    def integral(self):
-        if not self._pid_list:
+    def integral(self, pid_list, I):
+        if not pid_list or len(pid_list)<2:
             return 0
 
-        modifier = (1/self.I)
+        modifier = self.I
         sum = 0
-"""change taking from wrong side"""
-        for x,(pid,t) in enumerate(self._pid_list):    #reiman sum of distance between vehicles
-            sum += pid * (t - self._pid_list[x][1])   #calculate deltat * pid val
+        """change taking from wrong side"""
+        for x,(pid,t) in enumerate(pid_list[:-1]):    #reiman sum of distance between vehicles
+            sum += pid * (t - pid_list[x+1][1])   #calculate deltat * pid val
 
         i_val = sum * modifier
         return i_val
 
-    """find derivative value of PID from communications and/or lidar"""
-    def derivative(self):
-        if not self._pid_list:
+    def derivative(self, pid_list, D):
+        if not pid_list or len(pid_list)<2:
             return 0
-"""change taking from wrong side"""
-        d_val = (self._pid_list[-1][0]-self._pid_list[-2][0])
-                /(self._pid_list[-1][1]-self._pid_list[-2][1])
-        d_val =* self.D
+
+        """change taking from wrong side"""
+        d_val = (self.pid_list[-1][0]-self.pid_list[-2][0])/(self.pid_list[-1][1]-self.pid_list[-2][1])
+        d_val *= self.D
 
         return d_val
 
-    """convert value from PID controller to pwm"""
-    def pid_to_pwm(self,pid_val):   #max val should be 2000 and min val is 1000
+    """convert value from PID controller to -10->10 value in sensor"""
+    def convert_pid(self,pid_val,output_scaling,output_clamp):
+        val = output_scaling*pid_val
 
-        return pwm_signal
+        if val > output_clamp[1]:
+            return output_clamp[1]
+        elif val < output_clamp[0]:
+            return output_clamp[0]
+        else:
+            return val
+    """
+    Use lidar and encoder alone to follow leading vehicle
+    """
 
-
-    def get_lead_car_delta_distance(self):
-
-
-
-class SteeringController():
-    def __init__(self, p = 1, i = 1, d = 1, k = 1, sensors, servo):
-        self.P = p
-        self.I = i
-        self.D = d
-        self.Kp = k
-        self.pwm_scale =  1000  #pulse width(ms)/speed(m/s)
-        self._pid_list = [] #add touple of (pid_val,time) for integration
-        self._pid_length = 20
-        self.sensors = sensors  #object that interacts with the sensors
-        self.servo = servo      #object that interacts and commands motor
-        self._steering_angle = 0    #degrees from straight ahead
-        self._reference_angle = 0   #degrees from straight ahead
-        self.operational_sensors = (True, True, True) #Encoder , lidar, comms
-        self.path = [] #((location),time) origin is x=0,y=0 y+ is forward right is +x
-
-    def control_loop(self):
-        self.operational_sensors = self.sensors.status
-        if all(self.operational_sensors):   #determine mode of sensor collection
-
-        velocity = get_velocity_somewhere() #pseudo code
-        positional_error = get_positional_error()
-
-        steering_error = self._reference_angle - self._steering_angle   #steering error
-        pid_input = positional_error * self.Kp + steering_error
-
-        pid_output = self.pid_controller(pid_input)
-        self._steering_angle = self.pid_to_angle(pid_output)
-        self.servo.set_servo_to(self._steering_angle)
-
-    """Translate then add new point"""
-    def update_path(self):
-        if all(self.operational_sensors): #all sensors active
-            now = time.time()
-            delta_t = self.path[-1][1] - now
-            my_movement =
-            translation = my_movement + delta_leader_movement
-
-            for :
-                return
-        elif self.operational_sensors[0]:   #encoder not working
-            do stuff
-        elif self.operational_sensors[1]: #lidar not working
-        do stuff
-        elif self.operational_sensors[3]: #coms not working
-        do stuff
+class Smart_Networking_Controls(Controls):
+    def __init__(self, lidar, gpio, encoder):
+        super(Smart_Networking_Controls, self).__init__(lidar, gpio, encoder)    #runs init of superclass
 
 
+    """
 
-    def get_ref_angle(self):
-        self._reference_angle
+    """
+    def get_errors():
+        v_error = self.find_velocity_error()
+        d_error = self.find_distance_error()
+        s_error = self.find_steering_error()
 
-    def get_positional_error(self):
-
-
-    """Following methods are for PID controller"""
-    def pid_controller(pid_input):
-        time = time.time()
-        _pid_list.append((pid_input,time))
-        if len(_pid_list) > self._pid_length:
-            del _pid_list[0]
-
-        pid_val = self.proportional(pid_input) +
-                  self.integral() +
-                  self.derivative()
-
-        return pid_val
-
-    """find proportional value of PID"""
-    def proportional(self, pid_input):
-        p_val = pid_input * self.P
-        return p_val
-
-    """find integral value of PID"""
-    def integral(self):
-        if not self._pid_list:
-            return 0
-
-        modifier = (1/self.I)
-        sum = 0
-
-        for x,(pid,t) in self._pid_list:    #reiman sum of distance between vehicles
-            sum += pid * (t - self._pid_list[x][1])   #calculate deltat * pid val
-
-        i_val = sum * modifier
-        return i_val
-
-    """find derivative value of PID from communications and/or lidar"""
-    def derivative(self):
-        if not self._pid_list:
-            return 0
-
-        d_val = (self._pid_list[-1][0]-self._pid_list[-2][0])
-                /(self._pid_list[-1][1]-self._pid_list[-2][1])
-        d_val =* self.D
-
-        return d_val
-
-    """convert value from PID controller to angle for servo """
-    def pid_to_angle(self,pid_val):
-        min_val = self.servo.min_angle
-        max_val = self.servo.max_angle
-
-
-class CarPhysics:
-    """Car config here"""
-    s = 16   #distance from center of front wheels
-    j = 12   #distance between king pins
-    r0 = 1  #distance from pin to center of wheel
-    Ijt = 8 #front to back axel
-
-    """calculations made with equations from
-    https://www.engineersedge.com/calculators/
-    vehicle_turning_circle_design_14730.htm"""
-    @staticmethod
-    def
+        return v_error, d_error, s_error

@@ -7,8 +7,8 @@ import socket
 class Packet:
 
     """ constructor """
-    def __init__(self, braking, steering, speed, timestamp):
-        self.braking = braking
+    def __init__(self, throttle, steering, speed, timestamp):
+        self.throttle = throttle
         self.steering = steering
         self.speed = speed
         self.timestamp = timestamp
@@ -32,8 +32,8 @@ class Packet:
     #output: formatted bytes
     """ builds packet string """
     def build_str(self):
-        delim = '--'
-        ret = str(self.braking) + delim + str(self.steering) \
+        delim = '-'
+        ret = str(self.throttle) + delim + str(self.steering) \
             + delim + str(self.speed) + delim + str(self.timestamp)
         return ret
     
@@ -46,7 +46,7 @@ class Packet:
             return -1 #returns packet indicating error
 
         #set internal variables
-        self.braking = lst[0] # For UUID
+        self.throttle = float(lst[0])
         self.steering = float(lst[1])
         self.speed = float(lst[2])
         self.timestamp = float(lst[3])
