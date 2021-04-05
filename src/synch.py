@@ -6,6 +6,9 @@ Last revision: Feb 17th, 2020
 
 import threading
 import timing
+import time
+import serial
+import json
 import network as net
 from queue import Queue
 from threading import Lock
@@ -14,6 +17,7 @@ from logger import Sys_logger, Data_logger
 from Packet import Packet
 from sensor import Encoder, GPIO_Interaction
 from lidar import Lidar
+
 
 class queue_skeleton(threading.Thread):
 
@@ -55,6 +59,7 @@ class queue_skeleton(threading.Thread):
     def check_full(self):
         return self.outque.full()
 
+
 class network_producer(queue_skeleton, recv_network):
 
     """Constructor"""
@@ -62,23 +67,28 @@ class network_producer(queue_skeleton, recv_network):
         queue_skeleton.__init__(self, None, out_que, logger, timeout)
         recv_network.__init__(self, port)
         self.running = True
+        self.packet = None
 
     def halt_thread(self):
         self.running = False
 
-    #enqueue received packets in the queue
+    def get_packet(self):
+        return self.packet
+
+    # enqueue received packets in the queue
     def run(self):
         while(self.running):
             try:
-                #Setting timeout of 1 second
-                temp, _ = self.listen_data(0.1)
+                # Setting timeout of 1 second
+                temp, _ = self.listen_data(0.001)
                 if(temp == -1):
                     self.logger.log_error("Socket timeout occured")
                 else:
-                    self.enqueue(temp)
+                    self.packet = temp
             except:
                 if(self.check_full()):
                     self.logger.log_error("Network Producer output queue is full")
+
 
 class network_consumer(queue_skeleton):
 
@@ -96,60 +106,76 @@ class network_consumer(queue_skeleton):
 
     def run(self):
         while(self.running):
-
-            #verify that queue isn't empty
-            #if(self.inque.check_empty()):
-            #    timing.sleep_for(self.timeout)
-
-            if(not self.check_empty()):
-                try:
-                    self.packet = self.dequeue()
-                except:
-                    self.logger.log_error("Could not deque packet")
-            #timeout becasue there is no data in the queue, will be respawned later
+            try:
+                self.packet = self.dequeue()
+            except:
+                self.logger.log_error("Could not deque packet")
+            # timeout becasue there is no data in the queue, will be respawned later
 #            else:
 #                return
 
-class encoder_producer(queue_skeleton, Encoder):
 
+class encoder_producer(queue_skeleton, Encoder):
     """Constructor"""
     def __init__(self, out_que, channel, logger, timeout, sample_wait):
         queue_skeleton.__init__(self, None, out_que, logger, timeout)
         Encoder.__init__(self, channel)
         self.running = True
         self.sample_wait = sample_wait
+        self.ser = serial.Serial('/dev/ttyTHS1', 19200, timeout=0.8)
+        self.ser.flush()
+        self.speed_array = []
+        print("encoder initialized")
 
     def halt_thread(self):
         self.running = False
 
-    #enqueue encoder values
+    # enqueue encoder values
     def run(self):
+        print("1. running encoder code")
         while(self.running):
             try:
-                #update speed to latest value
-                self.sample_speed()
-                #get latest value
-                speed = self.get_speed()
-                self.enqueue(speed)
-            except:
+                try:
+                    start = time.time()
+                    self.ser.flush()
+                    data = self.ser.readline().decode()
+                    next_t = time.time()
+                except serial.SerialTimeoutException:
+                    print("Serial Timeout")
+                    self.logger.log_error("Serial Timeout error")
+                except serial.SerialException as e:
+                    print(e)
+                    print("help")
+                    self.logger.log_error(e)
+                except Exception as e:
+                    print(e)
+                    raise e
+                try:
+                    j_data = json.loads(data)
+                    tally = j_data["tally"]
+                    delta_ms = j_data["delta_time"]
+                    self.sample_speed(tally, delta_ms)
+                except Exception as e:
+                    print(e)
+            except Exception as e:
+                print(e)
                 self.logger.log_error("Failed to read encoder value")
+        print("Out of loop")
 
-        #creating sampling delay
-        #TODO: verify if millisecond / microsend time is necessary
-        timing.sleep_for(self.sample_wait)
 
 class encoder_consumer(queue_skeleton):
-
     """Constructor"""
     def __init__(self, in_que, out_que, logger, thr_timeout):
         queue_skeleton.__init__(self, in_que, out_que, logger, thr_timeout)
         self.running = True
         self.timeout = thr_timeout
+        self.speed = 0
 
     def halt_thread(self):
         self.running = False
 
     def get_speed(self):
+        #print("In consumer get speed")
         return self.speed
 
     def run(self):
@@ -170,7 +196,6 @@ class encoder_consumer(queue_skeleton):
 
 
 class lidar_producer(queue_skeleton, Lidar):
-
     """Constructor"""
     def __init__(self, out_que, channel, logger, timeout):
         queue_skeleton.__init__(self, None, out_que, logger, timeout)
@@ -180,16 +205,15 @@ class lidar_producer(queue_skeleton, Lidar):
     def halt_thread(self):
         self.running = False
 
-    #enqueue encoder values
+    # enqueue encoder values
     def run(self):
-        #initiate the scan
-        self.start_scan()
-        while(self.running):
-            try:
-                scan = self.get_scan()
-                self.enqueue(scan)
-            except:
-                self.logger.log_error("Failed to read encoder value")
+        # initiate the scan
+        try:
+            self.start_scan()
+        except Exception as e:
+            print(e)
+            print("failed to read lidar value")
+            self.logger.log_error("Failed to read lidar value")
 
 class lidar_consumer(queue_skeleton, Lidar):
 
@@ -198,13 +222,13 @@ class lidar_consumer(queue_skeleton, Lidar):
         queue_skeleton.__init__(self, in_que, out_que, logger, thr_timeout)
         self.running = True
         self.timeout = thr_timeout
+        self.scan = None
+
 
     def halt_thread(self):
         self.running = False
 
     #return the latest scan
-    def get_scan(self):
-        return self.scan
 
     def run(self):
         while(self.running):
