@@ -136,6 +136,8 @@ class Dumb_Networking_Controls(Controls):
         super(Dumb_Networking_Controls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer)    #runs init of superclass
         self.dumb_networking_mode = mode    # mode 0 is chain mode// mode 1 is leader mode
         self.accel_cmd = 0
+        self.last_steering_cmd = 0
+        self.last_throttle_cmd = 0
         self.steering_list = [0]
         if mode == 0:
             #in chain mode
@@ -149,15 +151,22 @@ class Dumb_Networking_Controls(Controls):
     def control_loop(self, enc_vel):
         self.transmission_delay = self.get_transmission_delay()
         accel_cmd = self.accel_cmd
-        if enc_vel is not 0:
+        print(f"enc vel: {enc_vel}")
+        if enc_vel !=  0:
             delay = self.initial_distance/enc_vel + self.transmission_delay
             delayed_time = time.time()-delay
             steering_cmd = self.get_delayed_steering_cmd(delayed_time)
         else:
             steering_cmd = 0
-
-        self.gpio.set_servo_pwm(steering_cmd)
-        self.gpio.set_motor_pwm(accel_cmd)
+        
+        print(f"str: {steering_cmd} accel: {accel_cmd}")
+    
+        if steering_cmd != self.last_steering_cmd: 
+            self.gpio.set_servo_pwm(steering_cmd)
+            self.last_steering_cmd = steering_cmd
+        if accel_cmd != self.last_throttle_cmd: 
+            self.gpio.set_motor_pwm(accel_cmd)
+            self.last_throttle_cmd = accel_cmd
         return steering_cmd, accel_cmd
 
     def get_transmission_delay(self):
@@ -175,6 +184,8 @@ class Dumb_Networking_Controls(Controls):
             del self.steering_list[0]
 
     def get_delayed_steering_cmd(self,delayed_time):
+        if len(self.steering_list) < 1:
+            return 0
         for i, j in enumerate(self.steering_list):
             if delayed_time > j[0]:
                 steering_cmd = j[1]

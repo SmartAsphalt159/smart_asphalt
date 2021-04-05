@@ -67,6 +67,7 @@ class network_producer(queue_skeleton, recv_network):
         queue_skeleton.__init__(self, None, out_que, logger, timeout)
         recv_network.__init__(self, port)
         self.running = True
+        self.packet = None
 
     def halt_thread(self):
         self.running = False
@@ -79,7 +80,7 @@ class network_producer(queue_skeleton, recv_network):
         while(self.running):
             try:
                 # Setting timeout of 1 second
-                temp, _ = self.listen_data(0.1)
+                temp, _ = self.listen_data(0.001)
                 if(temp == -1):
                     self.logger.log_error("Socket timeout occured")
                 else:

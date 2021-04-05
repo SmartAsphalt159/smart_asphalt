@@ -5,7 +5,6 @@ Main file for smart aspahlt's platooning code
 Last revision: Feburary 17th, 2020
 """
 
-
 import sys
 import threading
 import network
@@ -64,14 +63,14 @@ def main():
 
     #CONTROL VARS
     #Velocity constants
-    vp = 1
+    vp = 0.7
     vi = 0
-    vd = 0
+    vd = 2
     vk = 1
     #Steering constants
-    sp = 1
+    sp = 0.5
     si = 0
-    sd = 0
+    sd = 0.3
 
     gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
 
@@ -112,12 +111,18 @@ def main():
             while True:
                 #TODO: double check
                 encoder_speed = controller.get_encoder_velocity()
-                packet = nc.get_packet()
+                print(f"encoder_speed: {encoder_speed}")
+                packet = np.get_packet()
+                if not packet:
+                    time.sleep(0.01)
+                    continue
+                # print(f"str: {packet.steering}  thtl: {packet.throttle}")
                 controller.get_newest_steering_cmd(packet.steering)
                 controller.get_newest_accel_cmd(packet.throttle)
                 strg, accl = controller.control_loop(encoder_speed)
+                
                 #Broadcast after control system
-                sn.broadcast_data(accl, strg, encoder_speed, time.time())
+                #sn.broadcast_data(accl, strg, encoder_speed, time.time())
         #Uncomment when written
         #TODO: when smart networking is implemented
         #elif(c_type == "smart"):

@@ -44,7 +44,7 @@ class Object:
             self.passed = True
 
             return None
-
+        """
         if not self.location_filter():
             self.passed = False
             print("failed location")
@@ -53,7 +53,7 @@ class Object:
         else:
             self.passed=True
             return None
-
+        """
     def len_filter(self):
         #print("len = ", len(self.pixels[0]))
         if len(self.pixels[0]) >  self.filter_len:
