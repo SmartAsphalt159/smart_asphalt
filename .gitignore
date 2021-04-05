@@ -1,2 +1,5 @@
 # Ignore Python3 generated files
 src/__pycache__/
+
+# Ignore pycharm generated files
+.idea/
