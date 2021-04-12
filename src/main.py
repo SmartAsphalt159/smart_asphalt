@@ -78,6 +78,7 @@ def main():
 
     #Network
     np = network_producer(net_q, recvport, log, timeout)
+
     #nc = network_consumer(net_q, None, log, net_thread_timeout)
 
     #Encoder
@@ -87,6 +88,7 @@ def main():
     #Lidar (pull controls updates)
     lp = lidar_producer(lidar_q, lidar_channel, log, lid_timeout)
     #lc = lidar_consumer(lidar_q, None, log, lid_thread_timeout)
+
 
     #start the producer consumer threads
     np.start()
@@ -106,7 +108,11 @@ def main():
             new_lidar = Lidar(False)
 
             carphys = CarPhysics()
+
             controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, np, ep, lp, mode = 1)
+
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lp, mode = 1)
+
 
             while True:
                 #TODO: double check
@@ -123,6 +129,7 @@ def main():
                 
                 #Broadcast after control system
                 #sn.broadcast_data(accl, strg, encoder_speed, time.time())
+
         #Uncomment when written
         #TODO: when smart networking is implemented
         #elif(c_type == "smart"):
@@ -134,10 +141,15 @@ def main():
             new_lidar = Lidar(False)
             time.sleep(0.1)
             carphys = CarPhysics()
+<<<<<<< HEAD
             try:
                 controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
             except KeyboardInterrupt as e:
                 raise e
+=======
+
+            controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
+>>>>>>> bffd58e92c9f9727bcc65263806d9ce4648926d8
             while True:
                 controller.get_lidar_data()
                 print("got lidar")
@@ -164,6 +176,7 @@ def main():
     except Exception as e:
         print("im here!")
         print(e)
+
         err = "Exitted loop - Exception: " + str(e)
         raise ValueError(err)
         log.log_error(err)
@@ -184,6 +197,7 @@ def main():
 
 
 def graceful_shutdown(log, gpio):
+
     gpio.shut_down()
     log.log_info("Shutting down gracefully")
 

@@ -41,7 +41,7 @@ class Packet:
     #ouput: error status, pkt obj is updated internally 
     """ breaksdown string and stores in string """
     def breakdown_str(self, fstr):
-        lst = fstr.split("-")
+        lst = fstr.split("--")
         if(len(lst) != 4): #if four items weren't sent, something went wrong 
             return -1 #returns packet indicating error
 
@@ -54,3 +54,5 @@ class Packet:
         #return okay
         return 0
 
+    def __str__(self):
+        return 'Packet(breaking: ' + str(self.braking) + ', steering: ' + str(self.steering) + ', speed: ' + str(self.speed) + ', timestamp: ' + str(self.timestamp) + ')'
