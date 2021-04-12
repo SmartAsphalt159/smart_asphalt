@@ -100,22 +100,33 @@ class Controls(object):
             scan = self.lidar_consumer.get_scan()
             if scan and not self.lidar_consumer.scan_read:
                 try:
-                    self.lidar_consumer.scan_read = True
-                    data = self.lidar.scan_break_objects_lines(scan)
-                    if not data:
-                        raise NoObject
-                    obj, line = data
-                    self.obj = obj
-                    self.line = line
-                    valid_read = True
-                except NoObject:
-                    print("No object")
-                    time.sleep(0.08)
+                    try:
+                        self.lidar_consumer.scan_read = True
+                        data = self.lidar.scan_break_objects_lines(scan)
+                        if not data:
+                            raise NoObject
+                        obj, line = data
+                        self.obj = obj
+                        self.line = line
+                        valid_read = True
+                    except NoObject:
+                        print("No object")
+                        try:
+                            time.sleep(0.08)
+                        except KeyboardInterrupt as e:
+                            raise e
+                    except KeyboardInterrupt as e:
+                        raise e
+                except KeyboardInterrupt as e:
+                    raise e
                 except Exception as e:
                     print(e)
                     raise ValueError("Get lidar data")
             else:
-                time.sleep(0.01)
+                try:
+                    time.sleep(0.01)
+                except KeyboardInterrupt as e:
+                    raise e
 
     def get_distance(self):
         position = self.lidar.get_position(self.obj)
@@ -231,7 +242,10 @@ class Lidar_Controls(Controls):
 
         if ref==0:
             print("getting ldiardata")
-            self.get_lidar_data()
+            try:
+                self.get_lidar_data()
+            except KeyboardInterrupt as e:
+                raise e
             print("lidar gotten")
             self.initial_distance = self.get_distance()
             self.carphys.set_past_obj_pos(self.lidar.get_position(self.obj))
