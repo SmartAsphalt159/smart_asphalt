@@ -243,12 +243,24 @@ class Lidar():
         self.lidar.connect()
         self.iterator = self.lidar.iter_measurments(500)
 
+    def start_file(self):
+        file_name = "timing_" + str(floor(time())) + ".txt" 
+        print(file_name)
+        self.f = open(file_name, 'w+')
+
+    def write_to_file(self, timing):
+        self.f.write(str(timing) + "\n")
+
+    def close_file(self):
+        self.f.close()
+
     def start_scan(self):
         # TODO: Implement into Producer consumer... always running
         """
         Creates loop that constantly updates a 360 degree slice. To close loop
         make self.end_scan = True
         """
+        self.start_file()
         scan = []
         start = 360
         last = -1
@@ -256,6 +268,7 @@ class Lidar():
         first = True    # first measurement is always junk
         print("Starting scan")
         c = 0
+        dt = 0
         then = time()
         start_time = then
         start_of_loop = then
@@ -263,6 +276,10 @@ class Lidar():
         t = then
         for new_scan, quality, angle, distance in self.iterator:
             #print("\n")
+            if self.end_scan or not self.running:
+                print(self.end_scan)
+                self.close_file()
+                break
             #print(f"since last start: {time()-start_of_loop} angle: {angle}")
             start_of_loop = time()
             #print(f"since last end of loop: {start_of_loop-end_of_loop}")
@@ -311,7 +328,9 @@ class Lidar():
                 last = -1
                 count = 0
                 now = time()
-                #print("since last scan: ", now-then)
+                dt = now-then
+                print("since last scan: ", dt)
+                self.write_to_file(dt)
                 #print("since start: ", now-start_time)
                 then = now
                 start_time = now
@@ -339,8 +358,6 @@ class Lidar():
             t = time()
             last = angle
 
-            if self.end_scan or not self.running:
-                break
             #print(f"self.end_scan and angle last {time()-t}")
             #print("END OF LOOP")
             #print(f"time to run {time()-start_of_loop}")
