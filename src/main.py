@@ -134,7 +134,10 @@ def main():
             new_lidar = Lidar(False)
             time.sleep(0.1)
             carphys = CarPhysics()
-            controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
+            try:
+                controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
+            except KeyboardInterrupt as e:
+                raise e
             while True:
                 controller.get_lidar_data()
                 print("got lidar")
@@ -159,12 +162,15 @@ def main():
         else:
             log.log_error("Input was not a valid type")
     except Exception as e:
+        print("im here!")
         print(e)
         err = "Exitted loop - Exception: " + str(e)
         raise ValueError(err)
         log.log_error(err)
     # exited from loop
-
+    
+    lp.end_scan = True
+    time.sleep(0.2)
     # halt other threads, they should exit naturally
     np.halt_thread()
     # nc.halt_thread()
