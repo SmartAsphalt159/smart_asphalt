@@ -29,11 +29,7 @@ def bind_skt(port, skt_type):
 
     ######## BEGIN SOCKET INITIALIZATION ########
     skt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)     #using ipv4 address + UDP packets
-<<<<<<< HEAD
-    ip = "100.100.1.255"#str(os.system('hostname -I | awk \'{print $1}\''))
-=======
     ip = "100.100.1.255" #str(os.system('hostname -I | awk \'{print $1}\''))
->>>>>>> bffd58e92c9f9727bcc65263806d9ce4648926d8
     if(skt_type == 0):
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  #configuring for broadcasting
             skt.connect((ip, port))                  #connecting on the braodcast port

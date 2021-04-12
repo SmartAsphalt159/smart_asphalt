@@ -141,15 +141,11 @@ def main():
             new_lidar = Lidar(False)
             time.sleep(0.1)
             carphys = CarPhysics()
-<<<<<<< HEAD
             try:
                 controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
             except KeyboardInterrupt as e:
                 raise e
-=======
 
-            controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
->>>>>>> bffd58e92c9f9727bcc65263806d9ce4648926d8
             while True:
                 controller.get_lidar_data()
                 print("got lidar")
