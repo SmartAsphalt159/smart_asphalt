@@ -6,7 +6,7 @@ Last revision: Feburary 17th, 2020
 """
 
 import sys
-import threading
+import threading #  TODO: Remove this is never used
 import network
 import time
 from sensor import GPIO_Interaction
@@ -18,116 +18,126 @@ from controls import *
 from lidar import Lidar
 from carphysics import CarPhysics
 
-def main():
 
-    #Dumb, smart, and lidar
-    #add arugments
+def parameter_initialization():
+    pass
+
+
+# TODO: Seems that it would be best to redesign main such that it reads a config file to run the code to disable and
+# enable features
+def main():
+    """ Executes and Initializes the Jetson Nano Program for Vehicle Platooning """
+    #  Dumb, smart, and lidar TODO: Rename DUMB to something else
+    #  add arugments 3 TODO: Implement a basic GUI to do this
+    c_type = None
     if(len(sys.argv) != 2):
         print("Usage is: python3 main <type>")
         print("Optional types: dumb, smart, lidar")
         exit(0)
     else:
-        #type of control
+        #  type of control TODO rename variable c_type to control_scheme add new options
         c_type = sys.argv[1]
 
-    #INIT LOGGER
+    #  Initialize the System Logger
     log = Sys_logger("Application")
 
-    #INIT QUEUES (not length cap)
+    #  Initialize Queues (not length cap)
     net_q = Queue(0)
     encoder_q = Queue(0)
     lidar_q = Queue(0)
 
-    #NETWORKING VARS
+    #  Network Parameters
     recvport = 1
     sendport = 2
     timeout = 2  # seconds
-    net_thread_timeout = 5
+    net_thread_timeout = 5  # TODO: Why is this never used?
     sn = network.send_network(sendport)
 
-    # GPIO vars
+    # GPIO Pin Parameters
     motor_ch = 32
     servo_ch = 33
 
-    # ENCODER VARS
-    # TODO: update to true value
+    # ENCODER Parameters
+    # TODO: update to true value, what does this mean?
     enc_channel = 19
     enc_timeout = 2
     sample_wait = 0.1
     enc_thread_timeout = 5
 
-    # LIDAR VARS
-    lidar_channel = "/dev/ttyUSB0"
+    # LIDAR Parameters
+    lidar_channel = "/dev/ttyUSB0"  # TODO: Currently set statically
     lid_timeout = 10
     lid_thread_timeout = 5
 
-    #CONTROL VARS
-    #Velocity constants
+    # PID Controller constants/parameters
+    # Longitudinal Controller
+    # Velocity constants/ Velocity Controller Constants
     vp = 0.7
     vi = 0
     vd = 2
     vk = 1
-    #Steering constants
+    # Lateral Controller
+    # Steering Controller Constants
     sp = 0.5
     si = 0
     sd = 0.3
 
     gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
 
-    #INIT PRODCUER CONSUMERS
+    # Initialize PRODUCER CONSUMERS
 
-    #Network
+    # Network Producer and Consumer
     np = network_producer(net_q, recvport, log, timeout)
-
     #nc = network_consumer(net_q, None, log, net_thread_timeout)
 
-    #Encoder
+    # Encoder Producer and Consumer
     ep = encoder_producer(encoder_q, enc_channel, log, enc_timeout, sample_wait)
     #ec = encoder_consumer(encoder_q, None, log, enc_thread_timeout)
 
-    #Lidar (pull controls updates)
+    # Lidar Producer and Consumer
     lp = lidar_producer(lidar_q, lidar_channel, log, lid_timeout)
     #lc = lidar_consumer(lidar_q, None, log, lid_thread_timeout)
 
 
-    #start the producer consumer threads
+    # Start producers and consumers
     np.start()
     #nc.start()
     ep.start()
     #ec.start()
     lp.start()
     #lc.start()
+    # Jetson Initialization is complete!
 
+    # Control Scheme Selection is Initialized
     try:
-        #update local objects (done by threads)
+        # update local objects (done by threads)/ TODO: What does this mean?
 
-        #Call control system
-        #TODO: Update to a better design pattern, this is pretty rough
-        if(c_type == "dumb"):
-            #call dumb contorl system
+        # Control Scheme Selection
+        if (c_type is None):
+            # TODO: Write to the system logger and tell the user something is wrong
+            pass
+        elif(c_type == "dumb"):
             new_lidar = Lidar(False)
-
             carphys = CarPhysics()
-
-            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, np, ep, lp, mode = 1)
-
-            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lp, mode = 1)
-
-
-            while True:
-                #TODO: double check
+            # TODO: Why are their two instances of Dumb_Networking_Controls to same location
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, np, ep, lp, mode=1)
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ec, lp, mode=1)
+            # TODO: While True is okay when you have a condition to break out of the loop, we do not
+            while True: # TODO: How often do these loops run?
+                # TODO: double check
                 encoder_speed = controller.get_encoder_velocity()
+                # TODO: This should be logged or have another thread that is printing the log as its going
                 print(f"encoder_speed: {encoder_speed}")
                 packet = np.get_packet()
                 if not packet:
                     time.sleep(0.01)
                     continue
-                # print(f"str: {packet.steering}  thtl: {packet.throttle}")
+                # print(f"str: {packet.steering}  thtl: {packet.throttle}") TODO: this info should be logged
                 controller.get_newest_steering_cmd(packet.steering)
                 controller.get_newest_accel_cmd(packet.throttle)
-                strg, accl = controller.control_loop(encoder_speed)
+                strg, accl = controller.control_loop(encoder_speed) # TODO: How accurate our the encoder readings?
                 
-                #Broadcast after control system
+                #Broadcast after control system TODO: Enable this since this should not effect performance
                 #sn.broadcast_data(accl, strg, encoder_speed, time.time())
 
         #Uncomment when written
@@ -137,7 +147,7 @@ def main():
             #TODO: once it is written
 
         elif(c_type == "lidar"):
-            #call lidar control system
+            # Lidar control system
             new_lidar = Lidar(False)
             time.sleep(0.1)
             carphys = CarPhysics()
@@ -154,7 +164,7 @@ def main():
                 # Broadcast after control system
                 print("Steering ", strg, "Accl ", accl)
                 #sn.broadcast_data(accl, strg, encoder_speed, time.time) #TODO: idk if we need this here
-        elif(c_type == "encoder_test"):
+        elif(c_type == "encoder_test"): # TODO This should be documented
             new_lidar = Lidar(False)
             carphys = CarPhysics()
             nc = None
@@ -166,7 +176,7 @@ def main():
 
         else:
             log.log_error("Input was not a valid type")
-    except Exception as e:
+    except Exception as e:  # TODO: This is too vague should only raise specific exceptions
         print(e)
 
         err = "Exitted loop - Exception: " + str(e)
@@ -187,7 +197,6 @@ def main():
 
 
 def graceful_shutdown(log, gpio):
-
     gpio.shut_down()
     log.log_info("Shutting down gracefully")
 

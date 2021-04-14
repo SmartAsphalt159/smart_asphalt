@@ -4,27 +4,31 @@ from math import sqrt, cos, sin, pi, floor, tan, atan
 from rplidar import RPLidar
 import numpy as np
 
+
+# TODO: Object is a bit of a vague name
 class Object:
-    def __init__(self, pixels, filter_len, last_time, threshold_size,rel_velocity, last_midpoint, box_len, sample, obj_found,err_fac=1):
+    # TODO: what is rel_velocity, error_fac
+    def __init__(self, pixels, filter_len, last_time, threshold_size, rel_velocity, last_midpoint, box_len, sample, obj_found,err_fac=1):
         self.pixels = pixels
         self.filter_len = filter_len
-        self.last_time = last_time
-        self.this_time = time()
+        self.last_time = last_time  # TODO:
+        self.this_time = time()  # TODO: current_time is better
         self.threshold_size = threshold_size
-        self.velocity = rel_velocity
+        self.velocity = rel_velocity # TODO: relative to the lidar?
         self.last_midpoint = last_midpoint
         self.box_len = box_len
         self.err_fac = err_fac
         self.obj_found = obj_found
-
+        # TODO: Explain types if possible of what variables are if not obvious
         self.size = None
         self.midpoint = None    #found from taking center of box
         self.center = None      #center of line found
         self.angle = None
         self.correct_object_score = None
         self.last_pixels = None
-        self.passed = False
-
+        self.passed = False # TODO: what is this for?
+        # TODO Why return NONE, do we not want to other lines to execute, I would suggest using break or a if else
+        # structure
         if not self.len_filter():
             self.passed = False
 
@@ -36,7 +40,7 @@ class Object:
             self.passed = False
 
             return None
-
+        # TODO: Log these items
         print("size x:",self.size[0]," y: ",self.size[1])
         print("at:",self.midpoint)
 
@@ -54,22 +58,23 @@ class Object:
             self.passed=True
             return None
         """
-    def len_filter(self):
+
+    def len_filter(self):  # TODO: rename using "is" bool naming scheme
         #print("len = ", len(self.pixels[0]))
-        if len(self.pixels[0]) >  self.filter_len:
+        if len(self.pixels[0]) > self.filter_len:
             return True
         else:
             return False
 
     """pass this object through filter. Objects too large/small are cut"""
-    def size_filter(self):
+    def size_filter(self):  # TODO: rename using "is" bool naming scheme
 
         if self.size[0] > self.threshold_size or self.size[1] > self.threshold_size:
             return False
         else:
             return True
 
-    def location_filter(self):
+    def location_filter(self):  # TODO: rename using "is" bool naming scheme
         if self.velocity:
             d_t = self.this_time - self.last_time
             d_pos = (self.velocity[0]*d_t,self.velocity[1]*d_t)
@@ -88,8 +93,9 @@ class Object:
             else:
                 return False
 
-    """find a size of box that all samples fit into"""
+
     def find_size(self):
+        """ find a size of box that all samples fit into """
         minx = maxx = self.pixels[0][0]
         miny = maxy = self.pixels[1][0]
 
@@ -109,8 +115,9 @@ class Object:
         self.size = (maxx-minx, maxy-miny)
         self.midpoint = (minx + self.size[0]/2,miny+ self.size[1]/2)
 
-    """compare last object to this object and return likely hood of being the same"""
     def find_likeness(self):
+        """ compare last object to this object and return likely hood of being the same """
+        # TODO: How effective is this method
         if self.midpoint[0] <= -200:
             return 0
         else:
@@ -119,40 +126,42 @@ class Object:
             l = distance + 5* from_center
             if l == 0:
                 l = 0.01
-
             return 1000/l
-        return likeness
+        return likeness  # TODO: This variable is never assigned so always returns None
 
-    def find_line_points(self,threshold):   #refrenced from https://github.com/Robotics-kosta/AMR-Line-extraction-from-Lidar-sensor-with-Split-and-Merge-algorithm/blob/master/src/main.py
+    def find_line_points(self, threshold):   # refrenced from https://github.com/Robotics-kosta/AMR-Line-extraction-from-Lidar-sensor-with-Split-and-Merge-algorithm/blob/master/src/main.py
         points = np.transpose(np.array(self.pixels))
-        lines = self.SAM(points,threshold)
+        lines = self.SAM(points, threshold)
         return lines    #returns lines as endpoints
 
-    def SAM(self,points,threshold):
-        max_d,index = self.find_distant(points)
+    # TODO: What does SAM mean? also should be lowercase
+    def SAM(self, points, threshold):
+        max_d, index = self.find_distant(points)
         if max_d > threshold:
-            points1 = self.SAM(points[:index+1],threshold)
-            points2 = self.SAM(points[index:],threshold)
-            npoints = np.vstack((points1[:-1],points2))
+            points1 = self.SAM(points[:index+1], threshold)
+            points2 = self.SAM(points[index:], threshold)
+            npoints = np.vstack((points1[:-1], points2))
         else:
-            npoints = np.vstack((points[0],points[-1]))
+            npoints = np.vstack((points[0], points[-1]))
         return npoints
 
-    def find_distant(self,points):
+    def find_distant(self, points):
         max_d = 0
         index = -1
-        for i in range(1,points.shape[0]):
-            d = self.get_d(points[i],points[0],points[-1])
+        for i in range(1, points.shape[0]):
+            d = self.get_d(points[i], points[0], points[-1])
             if (d > max_d):
                 index = i
                 max_d = d
-        return (max_d,index)
+        return (max_d, index)
 
+    # TODO: Use a better name! what d do you speak of
     def get_d(self, p, pstart, pend):
         if np.all(np.equal(pstart, pend)):
             return np.linalg.norm(p-pstart)
         return np.divide(np.abs(np.linalg.norm(np.cross(pend-pstart, pstart-p))), np.linalg.norm(pend-pstart))
 
+    # TODO: Better fcn name
     def find_line_data(self, p1, p2):
         center = (p2+p1)/2                  # center of line segment
         length = np.linalg.norm(p2-p1)      # length of line segment
@@ -160,12 +169,14 @@ class Object:
         angle = np.arctan(dp[1]/dp[0]) * 180/np.pi      # angle from x axis to normal of line
         return angle, center, length
 
+    # TODO: Better fcn name
     def find_line_lines(self, lines):
         line_list = []
         for index in range(1, lines.shape[0]):
             line_list.append(self.find_line_data(lines[index-1], lines[index]))
         return line_list
 
+    # TODO: Decide if should be static
     def colinear(self, lines, threshold_angle):
         for i, line1 in enumerate(lines):
             for j, line2 in enumerate(lines):
@@ -221,6 +232,7 @@ class Object:
 
 
 class Lidar():
+
     def __init__(self, scanner, USB_port='/dev/ttyUSB0'):
         if scanner:
             self.lidar = RPLidar(USB_port)
@@ -244,7 +256,7 @@ class Lidar():
         self.iterator = self.lidar.iter_measurments(500)
 
     def start_scan(self):
-        # TODO: Implement into Producer consumer... always running
+        # TODO: Needs Heavy Cleanup
         """
         Creates loop that constantly updates a 360 degree slice. To close loop
         make self.end_scan = True
