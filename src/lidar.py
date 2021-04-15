@@ -134,7 +134,7 @@ class Object:
         lines = self.SAM(points, threshold)
         return lines    #returns lines as endpoints
 
-    # TODO: What does SAM mean? also should be lowercase
+    # TODO: What does SAM mean? also should be lowercase, split and merge algorithm
     def SAM(self, points, threshold):
         max_d, index = self.find_distant(points)
         if max_d > threshold:
@@ -232,14 +232,14 @@ class Object:
 
 
 class Lidar():
-
+    # Functionalities, doing the scanning and other operations, if true
     def __init__(self, scanner, USB_port='/dev/ttyUSB0'):
         if scanner:
             self.lidar = RPLidar(USB_port)
             self.lidar.stop()
             self.lidar.connect()
             self.iterator = self.lidar.iter_measurments(1000)
-        self.time_last = 0
+        self.time_last = 0 #this is meant to store data and modify
         self.last_measurement = None
         self.object_found = False
         self.empty_scans = 0
