@@ -2,7 +2,7 @@
 
 """
 Logging file for smart asphalt's platooning code
-Last revision: January 9th, 2021 
+Last revision: April 15th, 2021 
 """
 
 import pandas as pd
@@ -43,35 +43,48 @@ class Data_logger:
     """ data logger Constructor """
     def __init__(self, sensor):
         self.sensor = sensor
+        self.iteration = 0
+        self.file_state = 0 #variable for keeping track of file naming, 0: need to get name, 1: named
+        self.sname = "" #file name
 
         #different constructor based on sensor, separated beacuse of sampling rates
         if(sensor == "network"):
             self.df =  pd.DataFrame(columns = ["Timestamp", "Braking", "Steering", "Speed"])
         elif(sensor == "lidar"):
             #TODO @Cayman: Please verify this
-            self.df =  pd.DataFrame(columns = ["Timestamp", "Angle", "Value"])
+            self.df =  pd.DataFrame(columns = ["Timestamp", "Angle", "Distance", "Intensity"])
         else:
             raise NameError("Invalid sensor choice for data logger")
 
-    """ Function for writing the data frame to a csv """
-    #TODO: Figure out how often this should occur, currently thinking of doing this on a scheudler
-    #Incomplete
-    def log_data(self):
-
+    """ Function to get updated log name based on prior logs """
+    def get_log_name(self):
         #get iteration
         it_r = open("iteration.txt", "r")
         line = it_r.readline()
-        iteration = line.strip()
+        self.iteration = int(line.strip())
+        print(self.iteration)
         it_r.close()
 
-        #open new logfile 
-        sname = self.sensor+iteration+".csv"
-        self.df.to_csv(sname, index = False)
-
-        #write new iteration
+        #write new iteration for next power on
         it_w = open("iteration.txt", "w")
-        it_w.write(str(int(iteration)+1))
+        it_w.write(str(int(self.iteration)+1))
         it_w.close()
+
+        self.sname = str(str(self.sensor) + str(self.iteration) + ".csv")
+        
+
+    """ Function for writing the data frame to a csv """
+    def log_data(self):
+
+        if self.file_state == 0: #get new file name if it needs to be named
+            self.get_log_name()
+            #open new logfile 
+            self.df.to_csv(path_or_buf=self.sname, mode='w', index=False)
+            self.file_state = 1
+        else: #append to file
+            self.df.to_csv(path_or_buf=self.sname, mode='a', index=False, header=False)
+               
+        self.df = self.df.iloc[0:0] #clear existing data from the dataframe
 
 
     """ Format data into append ready data frame row """
@@ -86,7 +99,8 @@ class Data_logger:
             row = {
                 "Timestamp": rawdata[0], 
                 "Angle": rawdata[1], 
-                "Value": rawdata[2] } 
+                "Distance": rawdata[2],
+                "Intensity": rawdata[3] } 
         return row
 
     """ update internal dataframe with the new row """
