@@ -7,16 +7,16 @@ Last revision: Feburary 17th, 2020
 
 import sys
 import threading
-import network
+import smartasphalt.network
 import time
-from sensor import GPIO_Interaction
+from smartasphalt.sensor import GPIO_Interaction
 from queue import Queue
-from logger import Sys_logger
-from synch import (network_producer, network_consumer, encoder_producer, encoder_consumer,
+from smartasphalt.logger import Sys_logger
+from smartasphalt.synch import (network_producer, network_consumer, encoder_producer, encoder_consumer,
     lidar_producer, lidar_consumer)
-from controls import *
-from lidar import Lidar
-from carphysics import CarPhysics
+from smartasphalt.controls import *
+from smartasphalt.lidar import Lidar
+from smartasphalt.carphysics import CarPhysics
 
 def main():
 
