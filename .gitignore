@@ -1,5 +1,7 @@
 # Ignore Python3 generated files
 src/__pycache__/
+src/smartasphalt.egg-info/
+*.pyc
 
 # Ignore pycharm generated files
 .idea/
