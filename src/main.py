@@ -62,7 +62,7 @@ def main():
     lid_thread_timeout = 5
 
     #CONTROL VARS
-    #Velocity constants
+    #Velocity constants PI controllers are often used rather than PD controllers for this
     vp = 0.7
     vi = 0
     vd = 2

@@ -93,3 +93,5 @@ class CarPhysics():
             del self.delta_obj_pos[:difference]
         #print("past obj pos after append ",self.past_obj_pos)
         return self.past_obj_pos    
+
+    
