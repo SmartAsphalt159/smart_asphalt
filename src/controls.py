@@ -1,9 +1,11 @@
 import time
 import numpy as np
 
+# TODO: Utilization Conventions https://namingconvention.org/python/
 
 class NoObject(Exception):
     pass
+
 
 class Controls(object):
     def __init__(self, lidar, gpio, carphys, encoder_consumer, lidar_consumer):
@@ -342,6 +344,48 @@ class Lidar_Controls(Controls):
     """
     Use lidar and encoder alone to follow leading vehicle
     """
+
+
+class NetworkVelocityController():
+    """
+        This controller is designed to work on the "following" vehicle to attempt and reach
+        the desired velocity commanded that the "lead" vehicle that it is following. This class is design
+        to be agnostic to the lidar. This means we wont have measurements of distance or tracking of the
+        "lead" vehicle beyond velocity and steering commands.
+    """
+
+    def __init__(self, gpio, car_physics, encoder_consumer, network_consumer):
+        """
+        Initializes the NetworkVelocityController class as long as the parameters are not
+        None.
+
+        :param gpio:
+        :param car_physics:
+        :param encoder_consumer:
+        :param network_consumer:
+        """
+        if not (gpio is None) or not (car_physics is None) or not (encoder_consumer is None) \
+                or not (network_consumer is None):
+            raise ValueError("One or more of the parameters in NetworkVelocityController was None!")
+        # TODO: Verify network producer/consumer is what I want
+        self.gpio = gpio
+        self.car_physics = car_physics
+        self.encoder_consumer = encoder_consumer
+        self.network_consumer = network_consumer
+        self.desired_velocity = None
+        self.desired_steering_angle = None  # TODO: is this a good name to use?
+        self.transmission_delay_millisecs = 10  # TODO: utilize a ping command to get round trip avg time
+                                                 # at different intervals in case of changes.
+
+    def cruise_control(self):
+        """
+        Provides vehicle velocity control in the longitudinal direction using only the information from the
+        encoder module to reach desired velocity and controls motors as a result.
+        :return: None
+        """
+        pass
+
+
 
 class Smart_Networking_Controls(Controls):
     def __init__(self, lidar, gpio, encoder):
