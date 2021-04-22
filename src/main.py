@@ -67,11 +67,13 @@ def main():
     #lid_thread_timeout = 5
 
     #CONTROL VARS
+    
     #Velocity constants
     vp = conf.get_param("float", "velocity", "p-term")
     vi = conf.get_param("float", "velocity", "i-term")
     vd = conf.get_param("float", "velocity", "d-term")
     vk = conf.get_param("float", "velocity", "k-term")
+    
     #Steering constants
     sp = conf.get_param("float", "steering", "p-term")
     si = conf.get_param("float", "steering", "i-term")
