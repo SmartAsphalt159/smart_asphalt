@@ -3,6 +3,7 @@ from time import time
 from math import sqrt, cos, sin, pi, floor, tan, atan
 from rplidar import RPLidar
 import numpy as np
+from logger import Data_logger
 
 class Object:
     def __init__(self, pixels, filter_len, last_time, threshold_size,rel_velocity, last_midpoint, box_len, sample, obj_found,err_fac=1):
@@ -237,6 +238,9 @@ class Lidar():
         self.new_scan = None
         self.scan_read = True
         self.end_scan = False
+        self.running = True
+        self.datalogger = Data_logger("lidar")
+        self.scan_count = 0
 
     def restart(self):
         self.lidar.stop()
@@ -276,6 +280,8 @@ class Lidar():
         t = then
         for new_scan, quality, angle, distance in self.iterator:
             #print("\n")
+            #increment the scan count for logging
+            self.scan_count+=1
             if self.end_scan or not self.running:
                 print(self.end_scan)
                 self.close_file()
@@ -351,6 +357,8 @@ class Lidar():
             if quality > 1 and distance > 1:
                 if angle < 90 or angle > 270:
                     scan.append((angle, distance,quality))
+                    #quality is placeholder for intensity later on
+                    self.datalogger.update_df([time(), angle, distance, quality]) 
                     #print(f"appended angle: {angle}")
                 #else:
                     #print(f"filtered angle: {angle}")
@@ -365,6 +373,14 @@ class Lidar():
             #print(f"time to run {time()-start_of_loop}")
             end_of_loop = time()
             t = time()
+
+            #log data to file every 10 scans (can change number later)
+            if (self.scan_count % 100 == 0):
+                self.datalogger.log_data()
+               
+            if self.end_scan or not self.running:
+                break
+
         print("End scan = ", self.end_scan)
 
     def get_scan_from_consumer(self):
