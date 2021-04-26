@@ -208,7 +208,6 @@ class Dumb_Networking_Controls(Controls):
     Copy velocity of lead vehicles
     Delay steering by velocity of my car divided by initial distance - transmission time_last
         in order to make steering commands at the same position as the lead vehicles
-
     If mode is chain find initial distance with lidar. Else pre set it manually
     In control loop do above
     """
@@ -350,7 +349,6 @@ class Smart_Networking_Controls(Controls):
 
 
     """
-
     """
     def get_errors(self):
         v_error = self.find_velocity_error()
