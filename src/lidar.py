@@ -318,7 +318,7 @@ class Lidar():
                 last = angle+0.5
                 if quality > 1 and distance > 1:
                     if angle < 90 or angle > 270:
-                        scan.append((angle,distance))
+                        scan.append((angle,distance,quality))
                 #print(f"time to run {time()-start_of_loop}")
                 end_of_loop = time()
                 #print("APPENDING ANGLE")
@@ -354,7 +354,7 @@ class Lidar():
             t = time()
             if quality > 1 and distance > 1:
                 if angle < 90 or angle > 270:
-                    scan.append((angle, distance))
+                    scan.append((angle, distance,quality))
                     #quality is placeholder for intensity later on
                     self.datalogger.update_df([time(), angle, distance, quality]) 
                     #print(f"appended angle: {angle}")
