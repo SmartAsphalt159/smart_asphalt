@@ -420,7 +420,7 @@ class Lidar():
             polar[index] = (t_ang + 90 if t_ang + 90 < 360 else t_ang - 270, pt[1])
 
         polar.sort()
-        for index, (angle, distance) in enumerate(polar):
+        for index, (angle, distance, quality) in enumerate(polar):
             if index == len(polar)-1:
                 if abs(distance-polar[0][1]) > threshold:  # make this loop around
                     t_ang = polar[0][0]
@@ -435,19 +435,20 @@ class Lidar():
         broken_objects = []
         for index, angle in enumerate(break_list):
             if index == len(break_list)-1:
-                temp = ([], [])
-                for a, d in polar:
+                temp = ([], [], [])
+                for a, d ,q in polar:
                     if a > break_list[index] or a < break_list[0]:
                         a = a - 90 if a - 90 > 0 else a + 270
                         lx, ly = self.polar_to_cartesian(a, d)
 
                         temp[0].append(lx)
                         temp[1].append(ly)
+                        temp[2].append(q)
                 broken_objects.append(temp)
 
             else:
-                temp = ([], [])
-                for a, d in polar:
+                temp = ([], [], [])
+                for a, d, q in polar:
 
                     if a > break_list[index] and a < break_list[index+1]:
                         a = a - 90 if a - 90 > 0 else a + 270
@@ -455,6 +456,7 @@ class Lidar():
                         lx, ly = self.polar_to_cartesian(a, d)
                         temp[0].append(lx)
                         temp[1].append(ly)
+                        temp[2].append(q)
                 broken_objects.append(temp)
 
         return broken_objects
