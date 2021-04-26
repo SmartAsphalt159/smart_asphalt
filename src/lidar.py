@@ -330,8 +330,10 @@ class Lidar():
                 now = time()
                 dt = now-then
                 print("since last scan: ", dt)
-                self.write_to_file(dt)
-                #print("since start: ", now-start_time)
+                
+                print("Time to write: ",time()-now) 
+                #print("since start: ", now-start_:ime)
+                now=time()
                 then = now
                 start_time = now
                 #print("Measurements: ",c)
