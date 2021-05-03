@@ -4,7 +4,33 @@ import math
 import numpy as np
 import time
 
-class CarPhysics():
+# Reference Links as off tues 4/20
+# 1). https://electronics.stackexchange.com/questions/354155/what-does-changing-the-throttle-to-a-bldc-esc-actually-do
+# 2). https://github.com/MPC-Berkeley/barc/issues/7
+# 3). https://eng.libretexts.org/Bookshelves/Industrial_and_Systems_Engineering/Book%3A_Chemical_Process_Dynamics_and_Controls_(Woolf)/06%3A_Modeling_Case_Studies/6.08%3A_Modeling_and_PID_Controller_Example_-_Cruise_Control_for_an_Electric_Vehicle
+# 4). https://www.codeproject.com/Articles/36459/PID-process-control-a-Cruise-Control-example
+# 5). https://python-control.readthedocs.io/en/0.8.3/cruise.html
+# 6). https://www.physicsforums.com/threads/how-to-calculate-torque-on-the-rear-wheels-of-an-rc-car.908163/
+# 7). https://www.electrical4u.net/calculator/electric-motor-torque-calculation-formula-torque-calculator-online/
+
+
+class Car:
+    """
+    This class should store the physical characteristics and fundamental models of the cars dynamics and kinematics.
+    """
+    def __init__(self, mass, tire_diam_cm):
+        """
+        Constructor meant to create instances of different cars and model their behaviors based on instance.
+        :param mass:
+        """
+        # Max Velocity 90-95 m/s motor 4 wheel drive
+        # Please utilize metric units or a consistent unit of measure
+        self.mass = mass                                # Mass is measured in (units)
+        self.tire_diam_cm = tire_diam_cm                # The diameter of the tire in centimeters 6.86cm
+        self.tire_radius_cm = float(tire_diam_cm/2)     # The radius of the tire in cm
+
+
+class CarPhysics:
     def __init__(self):
         self.delta_obj_pos = []
         self.last_time = time.time()
@@ -94,4 +120,3 @@ class CarPhysics():
         #print("past obj pos after append ",self.past_obj_pos)
         return self.past_obj_pos    
 
-    
