@@ -282,7 +282,7 @@ class Lidar_Controls(Controls):
         if len(self.velocity_pid_list) > self.velocity_pid_length:
             del self.velocity_pid_list[0]
 
-        pid_val = self.proportional(pid_input, self.velocity_P) + \
+        pid_val = self.proporti onal(pid_input, self.velocity_P) + \
                   self.integral(self.velocity_pid_list, self.velocity_I) + \
                   self.derivative(self.velocity_pid_list, self.velocity_D)
 
@@ -332,7 +332,7 @@ class Lidar_Controls(Controls):
         return d_val
 
     """convert value from PID controller to -10->10 value in sensor"""
-    def convert_pid(self,pid_val,output_scaling,output_clamp):
+    def convert_pid(self, pid_val, output_scaling, output_clamp):
         val = output_scaling*pid_val
 
         if val > output_clamp[1]:
@@ -346,13 +346,16 @@ class Lidar_Controls(Controls):
     """
 
 
-class NetworkVelocityController():
+class NetworkVelocityController:
     """
         This controller is designed to work on the "following" vehicle to attempt and reach
         the desired velocity commanded that the "lead" vehicle that it is following. This class is design
         to be agnostic to the lidar. This means we wont have measurements of distance or tracking of the
         "lead" vehicle beyond velocity and steering commands.
     """
+
+
+
 
     def __init__(self, gpio, car_physics, encoder_consumer, network_consumer):
         """
@@ -374,8 +377,12 @@ class NetworkVelocityController():
         self.network_consumer = network_consumer
         self.desired_velocity = None
         self.desired_steering_angle = None  # TODO: is this a good name to use?
-        self.transmission_delay_millisecs = 10  # TODO: utilize a ping command to get round trip avg time
+        self.transmission_delay_millisecs = 3  # TODO: utilize a ping command to get round trip avg time, negligable
                                                  # at different intervals in case of changes.
+        self.proportional_term = 0;
+        self.integral_term = 0;
+        self.integrator = 0;
+        self.previous_velocity_error = 0;
 
     def cruise_control(self):
         """
@@ -383,7 +390,12 @@ class NetworkVelocityController():
         encoder module to reach desired velocity and controls motors as a result.
         :return: None
         """
-        pass
+
+        velocity_error = self.desired_velocity - self.encoder_consumer.get_speed()  #TODO Verify get speed does what I think?
+        self.proportional_term = self.proportional_term * velocity_error
+        self.integrator = self.integrator + velocity_error + self.previous_velocity_error
+
+        self.previous_velocity_error = velocity_error
 
 
 
