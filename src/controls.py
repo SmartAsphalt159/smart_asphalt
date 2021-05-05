@@ -136,6 +136,7 @@ class Controls(object):
         return distance
 
     def get_encoder_velocity(self):
+        """ Gets the velocity of the encoder in millimeters per second """
         encoder_velocity = self.encoder_consumer.get_speed()
         return encoder_velocity
 
@@ -257,7 +258,7 @@ class Lidar_Controls(Controls):
         print(f"v_error = {v_error} d_error = {d_error} s_error = {s_error}")
         velocity_pid_input = d_error * self.velocity_Kp + v_error
         velocity_pid_output = self.velocity_pid_controller(velocity_pid_input)
-        accel_cmd = self.convert_pid(velocity_pid_output, self.velocity_output_scaling, self.velocity_output_clamp)
+        accel_cmd = self.convert_pid(velocity_pid_output, self.velocity_output_scaling, self.velocity_output_clamp) # TODO PID: output wtf is happening here
         self.gpio.set_motor_pwm(accel_cmd)
 
         steering_pid_input = s_error
@@ -282,7 +283,7 @@ class Lidar_Controls(Controls):
         if len(self.velocity_pid_list) > self.velocity_pid_length:
             del self.velocity_pid_list[0]
 
-        pid_val = self.proporti onal(pid_input, self.velocity_P) + \
+        pid_val = self.proportional(pid_input, self.velocity_P) + \
                   self.integral(self.velocity_pid_list, self.velocity_I) + \
                   self.derivative(self.velocity_pid_list, self.velocity_D)
 
@@ -306,7 +307,7 @@ class Lidar_Controls(Controls):
         print(f"P = {p_val}")
         return p_val
 
-    def integral(self, pid_list, I):
+    def  (self, pid_list, I):
         if not pid_list or len(pid_list)<2:
             return 0
 
@@ -346,7 +347,7 @@ class Lidar_Controls(Controls):
     """
 
 
-class NetworkVelocityController:
+class NetworkAdaptiveCruiseController:
     """
         This controller is designed to work on the "following" vehicle to attempt and reach
         the desired velocity commanded that the "lead" vehicle that it is following. This class is design
@@ -354,12 +355,9 @@ class NetworkVelocityController:
         "lead" vehicle beyond velocity and steering commands.
     """
 
-
-
-
-    def __init__(self, gpio, car_physics, encoder_consumer, network_consumer):
+    def __init__(self, gpio=None, car_physics=None, encoder_consumer=None, network_consumer=None, is_sim_car=False):
         """
-        Initializes the NetworkVelocityController class as long as the parameters are not
+        Initializes the NetworkAdaptiveCruiseController class as long as the parameters are not
         None.
 
         :param gpio:
@@ -367,22 +365,35 @@ class NetworkVelocityController:
         :param encoder_consumer:
         :param network_consumer:
         """
-        if not (gpio is None) or not (car_physics is None) or not (encoder_consumer is None) \
-                or not (network_consumer is None):
+        if not (gpio is None) or not (car_physics is None) or not (network_consumer is None):
             raise ValueError("One or more of the parameters in NetworkVelocityController was None!")
         # TODO: Verify network producer/consumer is what I want
+        self.is_sim_car = is_sim_car
+        if self.is_sim_car is True:
+            self.encoder_consumer = None
+        else:
+            self.encoder_consumer = encoder_consumer
         self.gpio = gpio
         self.car_physics = car_physics
-        self.encoder_consumer = encoder_consumer
         self.network_consumer = network_consumer
         self.desired_velocity = None
+        self.measured_velocity = None
         self.desired_steering_angle = None  # TODO: is this a good name to use?
         self.transmission_delay_millisecs = 3  # TODO: utilize a ping command to get round trip avg time, negligable
                                                  # at different intervals in case of changes.
-        self.proportional_term = 0;
-        self.integral_term = 0;
-        self.integrator = 0;
-        self.previous_velocity_error = 0;
+        self.proportional_term = 0
+        self.integral_term = 0
+        self.accumulated_error = 0
+        self.pid_limit_max = 10 # Can be modified
+        self.pid_limit_min = 0  # Can be modified
+        # self.previous_velocity_error = 0
+
+    def cruise_control_init(self):
+        """
+        Resets Control Variables
+        :return:
+        """
+        self.accumulated_error = 0
 
     def cruise_control(self):
         """
@@ -390,13 +401,33 @@ class NetworkVelocityController:
         encoder module to reach desired velocity and controls motors as a result.
         :return: None
         """
+        if self.measured_velocity is None:
+            raise ValueError("In cruise_control, measured_velocity has value of None, must be assigned!")
 
-        velocity_error = self.desired_velocity - self.encoder_consumer.get_speed()  #TODO Verify get speed does what I think?
-        self.proportional_term = self.proportional_term * velocity_error
-        self.integrator = self.integrator + velocity_error + self.previous_velocity_error
+        # PI Controller Begins
 
-        self.previous_velocity_error = velocity_error
+        # Motor speed is between 0 - 10 where 0 is neutral and 10 is max throttle, we want to translate throttle
+        # clamp
+        velocity_error = self.desired_velocity - self.measured_velocity
+        proportional_expression = self.proportional_term * velocity_error
+        self.accumulated_error = velocity_error + self.accumulated_error
+        integral_expression = self.integral_term * self.accumulated_error
+        # Anti windup for I term
+        pi_out = proportional_expression + integral_expression
 
+        # self.previous_velocity_error = velocity_error
+        # We want to output the change in power
+
+        return pi_out
+
+    def control_loop(self):
+        if self.is_sim_car is False:
+            self.measured_velocity = self.encoder_consumer.get_speed()
+        self.cruise_control()
+
+
+    def set_measured_velocity(self, measured_velocity):
+        self.measured_velocity = measured_velocity
 
 
 class Smart_Networking_Controls(Controls):
