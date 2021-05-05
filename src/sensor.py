@@ -48,23 +48,23 @@ class GPIO_Interaction():
         self.motor_pwm.ChangeDutyCycle(self.motor_format(float(value)))
 
 
-class Encoder():
-    def __init__(self, channel):
-        tire_r = 35
-        self.mag_num = 2
-        print("Initting encoder")
+class Encoder:
+    def __init__(self, channel):  # TODO: Why is channel here and never used?
+        tire_r = 35 # Tire_radius in millimeters
+        self.mag_num = 2 # Amount of magnets
+        print("Initializing encoder")
         self.r = tire_r
         self.tally = 0
         self.speed = 0
         self.last_speed = 0
         self.speed_array = []
+        self.acceleration_array = []
         self.speed_read = True
 
     def sample_speed(self, tally, delta_ms):
         self.tally = tally
-        #print("tally: ",tally)
-        rps = tally/(self.mag_num*(delta_ms/1000))
-        speed = 2*3.1415*rps*self.r
+        rps = self.tally/(self.mag_num*(delta_ms/1000))
+        speed = 2*3.1415*rps*self.r  # millimeters per second
         self.speed_array.append((speed, delta_ms/1000))
         self.speed_read = False
 
@@ -87,3 +87,6 @@ class Encoder():
         self.speed_read = True
         self.last_speed = avg_speed
         return avg_speed
+
+    def get_acceleration(self):
+        pass
