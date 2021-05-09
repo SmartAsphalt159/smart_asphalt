@@ -142,7 +142,7 @@ def main():
             time.sleep(0.1)
             carphys = CarPhysics()
             try:
-                controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
+                controller = LidarControls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
             except KeyboardInterrupt as e:
                 raise e
 
@@ -174,7 +174,7 @@ def main():
             speed = 0  # millimeters per second
             throttle = 0  # between 0 - 10
             steering = 0  # Currently is servo position not heading
-            timestamp = get_current_time() # the time when message is sent
+            timestamp = get_current_time()  # the time when message is sent
 
             while True:
                 network_controller.control_loop()

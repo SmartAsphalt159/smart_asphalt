@@ -153,7 +153,7 @@ def main():
             time.sleep(0.1)
             carphys = CarPhysics()
             try:
-                controller = Lidar_Controls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
+                controller = LidarControls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
             except KeyboardInterrupt as e:
                 raise e
 

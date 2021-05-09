@@ -20,16 +20,16 @@ class Controls(object):
     def find_velocity_error(self, mode=0):   # mode 0: lidar // mode 1: encoders over networking
         if mode == 0:
             if self.obj.velocity:
-                v_error = np.sign(self.obj.velocity[0])*(self.obj.velocity[0]**2+self.obj.velocity[0]**2)**0.5
+                velocity_error = np.sign(self.obj.velocity[0])*(self.obj.velocity[0]**2+self.obj.velocity[0]**2)**0.5
             else:
                 # TODO: Add condition for finding velocity error with encoders over network
-                v_error = 0
+                velocity_error = 0
         else:
             my_enc_vel = self.get_encoder_velocity()
             lead_enc_vel = 0   #get this from communications
-            v_error = lead_enc_vel - my_enc_vel
+            velocity_error = lead_enc_vel - my_enc_vel
 
-        return v_error
+        return velocity_error
 
     def find_distance_error(self,d_ref):
         distance = self.get_distance()
@@ -207,6 +207,8 @@ class Dumb_Networking_Controls(Controls):
                 return steering_cmd
         return 0
 
+
+class LidarControls(Controls):
     """
     Copy velocity of lead vehicles
     Delay steering by velocity of my car divided by initial distance - transmission time_last
@@ -215,35 +217,34 @@ class Dumb_Networking_Controls(Controls):
     In control loop do above
     """
 
-class Lidar_Controls(Controls):
     def __init__(self, vp, vi, vd, vk, sp, si, sd, lidar, gpio, carphys, encoder_consumer, lidar_consumer, ref=0):
-        super(Lidar_Controls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer)    #runs init of superclass
+        super(LidarControls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer)    #runs init of superclass
         self.velocity_P = vp
         self.velocity_I = vi
         self.velocity_D = vd
         self.velocity_Kp = vk
 
-        self.velocity_pid_list = [] #add touple of (pid_val,time) for integration
+        self.velocity_pid_list = []  # add tuple of (pid_val,time) for integration
         self.velocity_pid_length = 20
-        self.velocity_pos_ref = 200 #mm reference position
+        self.velocity_pos_ref = 200  # millimeters (mm) reference position
 
-        self.velocity_output_clamp = (-1,4)  #clamps output between these two values
+        self.velocity_output_clamp = (-1, 4)  # clamps output between these two values
         self.velocity_output_scaling = 1/100
 
         self.steering_P = sp
         self.steering_I = si
         self.steering_D = sd
 
-        self.steering_pid_list = [] #add touple of (pid_val,time) for integration
+        self.steering_pid_list = []  # add tuple of (pid_val,time) for integration
         self.steering_pid_length = 20
 
-        self.steering_output_clamp = (-10,10)  #clamps output between these two values
+        self.steering_output_clamp = (-10, 10)  # clamps output between these two values
         self.steering_output_scaling = 1/100
 
         self.last_steering = 0
 
-        if ref==0:
-            print("getting ldiardata")
+        if ref == 0:
+            print("getting lidar data")
             try:
                 self.get_lidar_data()
             except KeyboardInterrupt as e:
@@ -278,7 +279,7 @@ class Lidar_Controls(Controls):
 
     def velocity_pid_controller(self, pid_input):
         t = time.time()
-        self.velocity_pid_list.append((pid_input,t))
+        self.velocity_pid_list.append((pid_input, t))
 
         if len(self.velocity_pid_list) > self.velocity_pid_length:
             del self.velocity_pid_list[0]
@@ -380,12 +381,13 @@ class NetworkAdaptiveCruiseController:
         self.measured_velocity = None
         self.desired_steering_angle = None  # TODO: is this a good name to use?
         self.transmission_delay_millisecs = 3  # TODO: utilize a ping command to get round trip avg time, negligable
-                                                 # at different intervals in case of changes.
+        self.encoder_sampling_rate = 400  # units in milliseconds
+        self.integral_delta_time = 1/self.encoder_sampling_rate # at different intervals in case of changes.
         self.proportional_term = 0
         self.integral_term = 0
         self.accumulated_error = 0
-        self.pid_limit_max = 10 # Can be modified
-        self.pid_limit_min = 0  # Can be modified
+        self.pid_limit_max = 10  # Can be modified
+        self.pid_limit_min = 0   # Can be modified
         # self.previous_velocity_error = 0
 
     def cruise_control_init(self):
@@ -408,16 +410,20 @@ class NetworkAdaptiveCruiseController:
 
         # Motor speed is between 0 - 10 where 0 is neutral and 10 is max throttle, we want to translate throttle
         # clamp
+        pi_out = 0
+        tolerance = 2500  # Error within 2500 mm/s of desired velocity we've reached goal
         velocity_error = self.desired_velocity - self.measured_velocity
-        proportional_expression = self.proportional_term * velocity_error
-        self.accumulated_error = velocity_error + self.accumulated_error
-        integral_expression = self.integral_term * self.accumulated_error
-        # Anti windup for I term
-        pi_out = proportional_expression + integral_expression
+        if abs(velocity_error) < 2500:
+            pi_out = 0  # TODO: This should change such that we maintain our current velocity
+        else:
+            proportional_expression = self.proportional_term * velocity_error
+            self.accumulated_error = velocity_error + self.accumulated_error
+            integral_expression = self.integral_term * self.accumulated_error * self.encoder_sampling_period
+            # Anti windup for I term
+            pi_out = proportional_expression + integral_expression
 
         # self.previous_velocity_error = velocity_error
         # We want to output the change in power
-
         return pi_out
 
     def control_loop(self):
