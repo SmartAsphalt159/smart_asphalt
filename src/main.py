@@ -18,18 +18,20 @@ from controls import *
 from lidar import Lidar
 from carphysics import CarPhysics
 
+
 def main():
 
-    #Dumb, smart, and lidar
-    #add arugments
+    # Input Handling Begin
     if(len(sys.argv) != 2):
         print("Usage is: python3 main <type>")
         print("Optional types: dumb, smart, lidar")
         exit(0)
     else:
-        #type of control
+        # type of control
         c_type = sys.argv[1]
+    # Input Handling Done
 
+    # One Time Initializations Begin
     #INIT LOGGER
     log = Sys_logger("Application")
 
@@ -97,7 +99,9 @@ def main():
     #ec.start()
     lp.start()
     #lc.start()
+    # One time initializations end
 
+    # Control Scheme Selection and Execution Begins
     try:
         #update local objects (done by threads)
 
@@ -184,8 +188,9 @@ def main():
         err = "Exitted loop - Exception: " + str(e)
         raise ValueError(err)
         log.log_error(err)
+    # Control Scheme Selection and Execution Ends
     # exited from loop
-    
+    # Killing and stopping unnecessary activities Begins
     lp.end_scan = True
     time.sleep(0.2)
     # halt other threads, they should exit naturally
@@ -198,10 +203,10 @@ def main():
 
     # gracefully exit program and reset vars
     graceful_shutdown(log, gpio)
+    # Killing and stopping unnecessary activities Ends
 
 
 def graceful_shutdown(log, gpio):
-
     gpio.shut_down()
     log.log_info("Shutting down gracefully")
 

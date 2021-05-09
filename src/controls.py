@@ -307,7 +307,7 @@ class Lidar_Controls(Controls):
         print(f"P = {p_val}")
         return p_val
 
-    def  (self, pid_list, I):
+    def integral(self, pid_list, I):
         if not pid_list or len(pid_list)<2:
             return 0
 
@@ -355,7 +355,7 @@ class NetworkAdaptiveCruiseController:
         "lead" vehicle beyond velocity and steering commands.
     """
 
-    def __init__(self, gpio=None, car_physics=None, encoder_consumer=None, network_consumer=None, is_sim_car=False):
+    def __init__(self, gpio=None, car_physics=None, encoder_consumer=None, network_producer=None, is_sim_car=False):
         """
         Initializes the NetworkAdaptiveCruiseController class as long as the parameters are not
         None.
@@ -363,9 +363,9 @@ class NetworkAdaptiveCruiseController:
         :param gpio:
         :param car_physics:
         :param encoder_consumer:
-        :param network_consumer:
+        :param network_producer:
         """
-        if not (gpio is None) or not (car_physics is None) or not (network_consumer is None):
+        if not (gpio is None) or not (car_physics is None) or not (network_producer is None):
             raise ValueError("One or more of the parameters in NetworkVelocityController was None!")
         # TODO: Verify network producer/consumer is what I want
         self.is_sim_car = is_sim_car
@@ -375,7 +375,7 @@ class NetworkAdaptiveCruiseController:
             self.encoder_consumer = encoder_consumer
         self.gpio = gpio
         self.car_physics = car_physics
-        self.network_consumer = network_consumer
+        self.network_producer = network_producer
         self.desired_velocity = None
         self.measured_velocity = None
         self.desired_steering_angle = None  # TODO: is this a good name to use?
@@ -424,7 +424,6 @@ class NetworkAdaptiveCruiseController:
         if self.is_sim_car is False:
             self.measured_velocity = self.encoder_consumer.get_speed()
         self.cruise_control()
-
 
     def set_measured_velocity(self, measured_velocity):
         self.measured_velocity = measured_velocity
