@@ -62,8 +62,10 @@ class queue_skeleton(threading.Thread):
 
 class network_producer(queue_skeleton, recv_network):
 
-    """Constructor"""
     def __init__(self, out_que, port, logger, timeout):
+        """
+            Initializes the network producer.
+        """
         queue_skeleton.__init__(self, None, out_que, logger, timeout)
         recv_network.__init__(self, port)
         self.running = True
@@ -80,11 +82,11 @@ class network_producer(queue_skeleton, recv_network):
         while(self.running):
             try:
                 # Setting timeout of 1 second
-                temp, _ = self.listen_data(0.001)
-                if(temp == -1):
+                packet, _ = self.listen_data(0.001)
+                if packet == -1:
                     self.logger.log_error("Socket timeout occured")
                 else:
-                    self.packet = temp
+                    self.packet = packet
             except:
                 if(self.check_full()):
                     self.logger.log_error("Network Producer output queue is full")
