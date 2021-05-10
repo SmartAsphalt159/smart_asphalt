@@ -56,12 +56,14 @@ class Encoder():
         self.r = tire_r
         self.tally = 0
         self.speed = 0
+        self.last_speed = 0
         self.speed_array = []
         self.speed_read = True
 
     def sample_speed(self, tally, delta_ms):
         self.tally = tally
-        rps = self.tally/(self.mag_num*(delta_ms/1000))
+        #print("tally: ",tally)
+        rps = tally/(self.mag_num*(delta_ms/1000))
         speed = 2*3.1415*rps*self.r
         self.speed_array.append((speed, delta_ms/1000))
         self.speed_read = False
@@ -69,13 +71,19 @@ class Encoder():
     def get_speed(self):
         total_t = 0
         d = 0
+        #print("len of speed array: ", len(self.speed_array))
         if len(self.speed_array) is 0:
-            return 0
+            if self.last_speed == 0:
+                return 0
+            else:
+                return self.last_speed
+
         for speed, d_time in self.speed_array:
             total_t += d_time
             d += speed*d_time
 
         avg_speed = d/total_t
-        speed_array = []
+        self.speed_array = []
         self.speed_read = True
+        self.last_speed = avg_speed
         return avg_speed

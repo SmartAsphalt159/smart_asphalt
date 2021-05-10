@@ -154,6 +154,7 @@ class encoder_producer(queue_skeleton, Encoder):
                     j_data = json.loads(data)
                     tally = j_data["tally"]
                     delta_ms = j_data["delta_time"]
+                    #print("tally: ",tally," dt: ", delta_ms)
                     self.sample_speed(tally, delta_ms)
                 except Exception as e:
                     print(e)

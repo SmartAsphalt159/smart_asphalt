@@ -164,8 +164,16 @@ def main():
             controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, np, ep, lp, mode=1)
             while True:
                 encoder_speed = controller.get_encoder_velocity()
-                #print(f"Speed = {encoder_speed}")
-                time.sleep(0.01)
+                print(f"Speed = {encoder_speed}")
+                time.sleep(0.5)
+        elif(c_type == "record"):
+            cont = True
+            try:
+                while cont:
+                    time.sleep(0.1)
+                    continue
+            except KeyboardInterrupt:
+                print("ending")
 
         else:
             log.log_error("Input was not a valid type")
