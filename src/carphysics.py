@@ -18,16 +18,18 @@ class Car:
     """
     This class should store the physical characteristics and fundamental models of the cars dynamics and kinematics.
     """
-    def __init__(self, mass, tire_diam_cm):
+    def __init__(self, mass, tire_diam_m):
         """
         Constructor meant to create instances of different cars and model their behaviors based on instance.
         :param mass:
+        :param tire_diam_m:
         """
         # Max Velocity 90-95 m/s motor 4 wheel drive
         # Please utilize metric units or a consistent unit of measure
         self.mass = mass                                # Mass is measured in (units)
-        self.tire_diam_cm = tire_diam_cm                # The diameter of the tire in centimeters 6.86cm
-        self.tire_radius_cm = float(tire_diam_cm/2)     # The radius of the tire in cm
+        self.tire_diam_m = tire_diam_m                # The diameter of the tire in centimeters 6.86cm
+        self.tire_radius_m = float(tire_diam_m / 2)     # The radius of the tire in cm
+        self.max_velocity = 95                          # Meters per second (m/s)
 
 
 class CarPhysics:

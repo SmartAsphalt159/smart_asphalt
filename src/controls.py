@@ -1,5 +1,6 @@
 import time
 import numpy as np
+from carphysics import Car
 
 # TODO: Utilization Conventions https://namingconvention.org/python/
 
@@ -26,7 +27,7 @@ class Controls(object):
                 velocity_error = 0
         else:
             my_enc_vel = self.get_encoder_velocity()
-            lead_enc_vel = 0   #get this from communications
+            lead_enc_vel = 0   # get this from communications
             velocity_error = lead_enc_vel - my_enc_vel
 
         return velocity_error
@@ -376,15 +377,17 @@ class NetworkAdaptiveCruiseController:
             self.encoder_consumer = encoder_consumer
         self.gpio = gpio
         self.car_physics = car_physics
+        self.car = Car(0, 0.07)             # Mass is zero for now and 0.07 meters is diameter of tire
         self.network_producer = network_producer
+        # Network Controller Variables and Parameters for controls
         self.desired_velocity = None
         self.measured_velocity = None
         self.desired_steering_angle = None  # TODO: is this a good name to use?
         self.transmission_delay_millisecs = 3  # TODO: utilize a ping command to get round trip avg time, negligable
         self.encoder_sampling_rate = 400  # units in milliseconds
-        self.integral_delta_time = 1/self.encoder_sampling_rate # at different intervals in case of changes.
-        self.proportional_term = 0
-        self.integral_term = 0
+        self.integral_delta_time = 1/self.encoder_sampling_rate  # at different intervals in case of changes.
+        self.proportional_constant = 0      # Modify P term as needed
+        self.integral_constant = 0          # Modify I term as needed
         self.accumulated_error = 0
         self.pid_limit_max = 10  # Can be modified
         self.pid_limit_min = 0   # Can be modified
@@ -407,13 +410,10 @@ class NetworkAdaptiveCruiseController:
             raise ValueError("In cruise_control, measured_velocity has value of None, must be assigned!")
 
         # PI Controller Begins
-
-        # Motor speed is between 0 - 10 where 0 is neutral and 10 is max throttle, we want to translate throttle
-        # clamp
         pi_out = 0
-        tolerance = 2500  # Error within 2500 mm/s of desired velocity we've reached goal
+        tolerance = 2.5  # Error within 2.5 m/s of desired velocity we've reached goal
         velocity_error = self.desired_velocity - self.measured_velocity
-        if abs(velocity_error) < 2500:
+        if abs(velocity_error) < tolerance:
             pi_out = 0  # TODO: This should change such that we maintain our current velocity
         else:
             proportional_expression = self.proportional_term * velocity_error
@@ -423,21 +423,41 @@ class NetworkAdaptiveCruiseController:
             pi_out = proportional_expression + integral_expression
 
         # self.previous_velocity_error = velocity_error
-        # We want to output the change in power
+
         return pi_out
 
     def control_loop(self):
+        """
+        Executes the Loop for the network cruise controller and verifies mode of operation is sim or real
+        :return: None
+        """
         if self.is_sim_car is False:
             self.measured_velocity = self.encoder_consumer.get_speed()
-        self.cruise_control()
+        pi_controller_output = self.cruise_control()
+        # Motor speed is between 0 - 10 where 0 is neutral and 10 is max throttle, we want to translate throttle
+        # clamp
+        # pi_controller clean_up
+        # We want to output the change in power
 
     def set_measured_velocity(self, measured_velocity):
+        """
+        Assigns the measured_velocity when unable to be set from the network so in the case of the "fake car"
+        :param measured_velocity:
+        :return:
+        """
         self.measured_velocity = measured_velocity
+
+    def set_proportional_value(self, pval):
+        self.proportional_constant = pval
+
+    def set_integral_value(self, ival):
+        self.integral_constant = ival
+
 
 
 class Smart_Networking_Controls(Controls):
     def __init__(self, lidar, gpio, encoder):
-        super(Smart_Networking_Controls, self).__init__(lidar, gpio, encoder)    #runs init of superclass
+        super(Smart_Networking_Controls, self).__init__(lidar, gpio, encoder)    # runs init of superclass
 
 
     """
