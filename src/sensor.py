@@ -2,6 +2,7 @@
 
 import Jetson.GPIO as GPIO
 import time
+from math import pi
 
 #NOTE: channel indicates GPIO port
 
@@ -50,8 +51,8 @@ class GPIO_Interaction():
 
 class Encoder:
     def __init__(self, channel):  # TODO: Why is channel here and never used?
-        tire_r = 35 # Tire_radius in millimeters
-        self.mag_num = 2 # Amount of magnets
+        tire_r = 0.035  # Tire_radius in meters
+        self.mag_num = 2  # Amount of magnets
         print("Initializing encoder")
         self.r = tire_r
         self.tally = 0
@@ -64,7 +65,7 @@ class Encoder:
     def sample_speed(self, tally, delta_ms):
         self.tally = tally
         rps = self.tally/(self.mag_num*(delta_ms/1000))
-        speed = 2*3.1415*rps*self.r  # millimeters per second
+        speed = 2*pi*rps*self.r  # meters per second (m/s)
         self.speed_array.append((speed, delta_ms/1000))
         self.speed_read = False
 
