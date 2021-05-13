@@ -3,7 +3,7 @@
 """
 Leader Vehicle Script to enable leader specific behavior and fit the sensor characteristics of the leader,
 currently does not have lidar enabled because lead vehicle does not have that sensor attatched.
-Last revision: Feburary 17th, 2020
+Last revision: May 9th, 2021
 """
 
 import sys
@@ -24,7 +24,7 @@ def main():
     # add arugments
     if (len(sys.argv) != 2):
         print("Command is \"python3 platoon_leader.py <type>\"")
-        print("Optional types: dumb, smart, lidar")
+        print("Optional types: dumb, smart-leader, lidar")
         exit(0)
     else:
         # type of control
