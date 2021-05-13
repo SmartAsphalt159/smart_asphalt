@@ -388,10 +388,11 @@ class NetworkAdaptiveCruiseController:
         self.integral_delta_time = 1/self.encoder_sampling_rate  # at different intervals in case of changes.
         self.proportional_constant = 0      # Modify P term as needed
         self.integral_constant = 0          # Modify I term as needed
+        self.derivative_constant = 0        # Modify D term as needed
         self.accumulated_error = 0
         self.pid_limit_max = 10  # Can be modified
         self.pid_limit_min = 0   # Can be modified
-        # self.previous_velocity_error = 0
+        self.previous_velocity_error = 0
 
     def cruise_control_init(self):
         """
@@ -413,16 +414,18 @@ class NetworkAdaptiveCruiseController:
         pi_out = 0
         tolerance = 2.5  # Error within 2.5 m/s of desired velocity we've reached goal
         velocity_error = self.desired_velocity - self.measured_velocity
-        if abs(velocity_error) < tolerance:
-            pi_out = 0  # TODO: This should change such that we maintain our current velocity
-        else:
-            proportional_expression = self.proportional_term * velocity_error
-            self.accumulated_error = velocity_error + self.accumulated_error
-            integral_expression = self.integral_term * self.accumulated_error * self.encoder_sampling_period
-            # Anti windup for I term
-            pi_out = proportional_expression + integral_expression
+        #if abs(velocity_error) < tolerance:
+        #    pi_out = self.desired_velocity  # TODO: This should change such that we maintain our current velocity
+        #else:
+        proportional_expression = self.proportional_constant * velocity_error
+        self.accumulated_error = velocity_error + self.accumulated_error
+        integral_expression = self.integral_constant * self.accumulated_error * self.integral_delta_time
+        # Anti windup for I term
+        derivative_expression = self.derivative_constant * self.previous_velocity_error
 
-        # self.previous_velocity_error = velocity_error
+        self.previous_velocity_error = velocity_error
+        pi_out = proportional_expression + integral_expression + derivative_expression
+        print("P=", proportional_expression, " I=", integral_expression, " D=", derivative_expression)
 
         return pi_out
 
@@ -431,6 +434,7 @@ class NetworkAdaptiveCruiseController:
         Executes the Loop for the network cruise controller and verifies mode of operation is sim or real
         :return: None
         """
+
         if self.is_sim_car is False:
             self.measured_velocity = self.encoder_consumer.get_speed()
         pi_controller_output = self.cruise_control()
@@ -438,14 +442,23 @@ class NetworkAdaptiveCruiseController:
         # clamp
         # pi_controller clean_up
         # We want to output the change in power
+        return pi_controller_output
 
     def set_measured_velocity(self, measured_velocity):
         """
         Assigns the measured_velocity when unable to be set from the network so in the case of the "fake car"
-        :param measured_velocity:
-        :return:
+        :param measured_velocity: velocity value recorded from a sensor in m/s
+        :return: None
         """
         self.measured_velocity = measured_velocity
+
+    def set_desired_velocity(self, desired_velocity):
+        """
+        Assigns the desired_velocity for the controller
+        :param desired_velocity: the set point to reach measured in meters per second (m/s)
+        :return: None
+        """
+        self.desired_velocity = desired_velocity
 
     def set_proportional_value(self, pval):
         self.proportional_constant = pval
@@ -453,6 +466,8 @@ class NetworkAdaptiveCruiseController:
     def set_integral_value(self, ival):
         self.integral_constant = ival
 
+    def set_derivative_value(self, dval):
+        self.derivative_constant = dval
 
 
 class Smart_Networking_Controls(Controls):
