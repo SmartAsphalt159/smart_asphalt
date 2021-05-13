@@ -13,8 +13,9 @@ class FakeCar:
 	def __init__(self, velocity, steering):
 		self.velocity = velocity 
 		self.controller = NetworkAdaptiveCruiseController(is_sim_car=True)
-		self.controller.set_proportional_value(.5)
-		self.controller.set_integral_value(0.4)
+		self.controller.set_proportional_value(1.34)
+		self.controller.set_integral_value(200)
+		self.controller.set_derivative_value(0.7)
 		self.desired_velocity = 0
 		self.steering = steering
 		self.input = []  # list of what should happen at each timestep
@@ -35,8 +36,10 @@ class FakeCar:
 	# iterate the controller once
 	def run_controller(self):
 		# complete once interface is known
-		self.desired_velocity = self.input[self.step]
-		self.velocity = self.controller.control_loop(self.velocity, self.desired_velocity)
+		self.desired_velocity = self.input[self.step]  # changing self.step
+		self.controller.set_desired_velocity(self.desired_velocity)
+		self.controller.set_measured_velocity(self.velocity)
+		self.velocity = self.controller.control_loop()
 		self.error = self.velocity - self.desired_velocity
 		self.df.loc[self.step] = [self.step, self.desired_velocity - self.velocity, self.desired_velocity, self.velocity]
 		self.step += 1
@@ -46,10 +49,10 @@ class FakeCar:
 		plt.plot(self.df["actual"], label='controller_output')
 		plt.title("Velocities per unit step")
 		plt.legend(loc="best")
-		plt.xlabel("Steps")		
-		plt.ylabel("Velocity")
+		plt.xlabel("Discrete Time Steps")
+		plt.ylabel("Velocity (m/s)")
 		plt.show()
-		#plt.savefig("vel_plot.png")
+		# plt.savefig("vel_plot.png")
 
 	def plotError(self): 
 		plt.plot(self.df["error"])
@@ -57,13 +60,14 @@ class FakeCar:
 		plt.xlabel("Steps")		
 		plt.ylabel("Error")
 		plt.show()
-		#plt.savefig("err_plot.png")
+		# plt.savefig("err_plot.png")
 
-#running fake car
+
+# running fake car
 fk = FakeCar(0, 0)
-while fk.step < (len(sys.argv) - 1):
+while fk.step < (len(sys.argv) - 1):  # change (len(sys.argv) - 1)
 	fk.run_controller()
 fk.plotVel()
-#fk.plotError()
+fk.plotError()
 
 
