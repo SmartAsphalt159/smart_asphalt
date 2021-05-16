@@ -10,8 +10,7 @@ import network
 from sensor import GPIO_Interaction
 from queue import Queue
 from logger import Sys_logger
-from synch import (network_producer, network_consumer, encoder_producer, encoder_consumer,
-                   lidar_producer, lidar_consumer)
+from synch import (network_producer, encoder_producer, encoder_consumer, lidar_producer, lidar_consumer)
 from controls import *
 from lidar import Lidar
 from carphysics import CarPhysics
@@ -107,7 +106,7 @@ def main():
 
             controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, net_producer, ep, lp, mode=1)
 
-            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, encoder_consumer_data, lp, mode=1)
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, net_producer, encoder_consumer_data, lp, mode=1)
 
             while True:
                 # TODO: double check
@@ -133,11 +132,12 @@ def main():
 
         elif (c_type == "lidar"):
             # call lidar control system
-            new_lidar = Lidar(False)
-            time.sleep(0.1)
+            new_lidar = Lidar(False)  # TODO: Why do we still do this?
+            time.sleep(0.1)  # TODO: Is this necessary and why?
             carphys = CarPhysics()
             try:
                 controller = LidarControls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
+                # TODO: Don't pass pid constants in, assign them from outside
             except KeyboardInterrupt as e:
                 raise e
 
@@ -155,28 +155,43 @@ def main():
         elif (c_type == "encoder_test"):
             new_lidar = Lidar(False)
             carphys = CarPhysics()
-            nc = None
             controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, net_producer, ep, lp, mode=1)
             while True:
                 encoder_speed = controller.get_encoder_velocity()
                 # print(f"Speed = {encoder_speed}")
                 time.sleep(0.01)
         elif c_type == "smart-follower":
-            log.log_info("Smart network selected, beginning control loop")
-            network_controller = NetworkAdaptiveCruiseController(gpio, carphys, encoder_consumer_data, net_producer)
-            network_controller.cruise_control_init()
+            log.log_info("Smart network selected (smart-follower), beginning control loop")
+
+            new_lidar = Lidar(False)
+            time.sleep(0.1)
+            carphys = CarPhysics()
+
+            try:
+                controller = LidarNetworkControls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp, net_producer)
+            except KeyboardInterrupt as e:
+                print("Keyboard Interrupt Detected, Quitting!")
+                raise e
+
+            # Initialize network variables
             desired_velocity = 0  # millimeters per second
             speed = 0  # millimeters per second
             throttle = 0  # between 0 - 10
             steering = 0  # Currently is servo position not heading
             timestamp = get_current_time()  # the time when message is sent
 
+            log.log_info("Smart-Network Initialization Complete, Beginning Control Loop")
             while True:
-                network_controller.control_loop()
-
-                speed = encoder_consumer_data.get_speed()
-                timestamp = get_current_time()
-                sn.broadcast_data(throttle, steering, speed, timestamp)
+                # Acquiring sensor data
+                controller.get_lidar_data()
+                vehicle_velocity = controller.get_encoder_velocity()  # (m/s)
+                strg, accl = controller.control_loop(vehicle_velocity)
+                log_data = f"strg: {strg} accel: {accl} velocity: {vehicle_velocity}mps"
+                log.log_info(log_data)
+                print(log_data)
+                # speed = encoder_consumer_data.get_speed()
+                # timestamp = get_current_time()
+                # sn.broadcast_data(throttle, steering, speed, timestamp)
         else:
             log.log_error("Input was not a valid type")
     except Exception as e:

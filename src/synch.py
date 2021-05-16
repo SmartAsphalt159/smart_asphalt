@@ -91,30 +91,30 @@ class network_producer(queue_skeleton, recv_network):
                 if(self.check_full()):
                     self.logger.log_error("Network Producer output queue is full")
 
-
-class network_consumer(queue_skeleton):
-
-    """Constructor"""
-    def __init__(self, in_que, out_que, logger, thr_timeout):
-        queue_skeleton.__init__(self, in_que, out_que, logger, thr_timeout)
-        self.running = True
-        self.timeout = thr_timeout
-
-    def halt_thread(self):
-        self.running = False
-
-    def get_packet(self):
-        return self.packet
-
-    def run(self):
-        while(self.running):
-            try:
-                self.packet = self.dequeue()
-            except:
-                self.logger.log_error("Could not deque packet")
-            # timeout becasue there is no data in the queue, will be respawned later
-#            else:
-#                return
+# NOT UTILIZED ***
+# class network_consumer(queue_skeleton):
+#
+#     """Constructor"""
+#     def __init__(self, in_que, out_que, logger, thr_timeout):
+#         queue_skeleton.__init__(self, in_que, out_que, logger, thr_timeout)
+#         self.running = True
+#         self.timeout = thr_timeout
+#
+#     def halt_thread(self):
+#         self.running = False
+#
+#     def get_packet(self):
+#         return self.packet
+#
+#     def run(self):
+#         while(self.running):
+#             try:
+#                 self.packet = self.dequeue()
+#             except:
+#                 self.logger.log_error("Could not deque packet")
+#             # timeout becasue there is no data in the queue, will be respawned later
+# #            else:
+# #                return
 
 
 class encoder_producer(queue_skeleton, Encoder):
