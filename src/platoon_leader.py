@@ -167,10 +167,10 @@ def main():
                 # print(f"Speed = {encoder_speed}")
                 time.sleep(0.01)
         elif c_type == "smart-leader":
-            log.log_info("Smart network selected, beginning control loop")
+            log.log_info("Smart network selected (smart-leader), beginning control loop")
             network_controller = NetworkAdaptiveCruiseController(gpio, carphys, encoder_consumer_data, net_producer)
             network_controller.cruise_control_init()
-            desired_velocity = 0 # millimeters per second
+            desired_velocity = 0  # millimeters per second
             speed = 0  # millimeters per second
             throttle = 0  # between 0 - 10
             steering = 0  # Currently is servo position not heading
@@ -178,10 +178,13 @@ def main():
 
             while True:
                 network_controller.control_loop()
-
                 speed = encoder_consumer_data.get_speed()
                 timestamp = get_current_time()
                 sn.broadcast_data(throttle, steering, speed, timestamp)
+                # logging Telemetry Data
+                log_data = f"velocity: {speed}mps"
+                log.log_info(log_data)
+                print(log_data)
         else:
             log.log_error("Input was not a valid type")
     except Exception as e:
