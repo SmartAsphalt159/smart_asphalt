@@ -11,8 +11,7 @@ import network
 from sensor import GPIO_Interaction
 from queue import Queue
 from logger import Sys_logger
-from synch import (network_producer, network_consumer, encoder_producer, encoder_consumer,
-                   lidar_producer, lidar_consumer)
+from synch import (network_producer, encoder_producer, encoder_consumer, lidar_producer, lidar_consumer)
 from controls import *
 from lidar import Lidar
 from carphysics import CarPhysics
@@ -168,7 +167,8 @@ def main():
                 time.sleep(0.01)
         elif c_type == "smart-leader":
             log.log_info("Smart network selected (smart-leader), beginning control loop")
-            network_controller = NetworkAdaptiveCruiseController(gpio, carphys, encoder_consumer_data, net_producer)
+            carphys = CarPhysics()
+            network_controller = NetworkAdaptiveCruiseController(gpio, carphys, encoder_consumer_data, False)
             network_controller.cruise_control_init()
             desired_velocity = 0  # millimeters per second
             speed = 0  # millimeters per second
@@ -180,7 +180,7 @@ def main():
                 network_controller.control_loop()
                 speed = encoder_consumer_data.get_speed()
                 timestamp = get_current_time()
-                sn.broadcast_data(throttle, steering, speed, timestamp)
+                #sn.broadcast_data(throttle, steering, speed, timestamp)88
                 # logging Telemetry Data
                 log_data = f"velocity: {speed}mps"
                 log.log_info(log_data)

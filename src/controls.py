@@ -355,7 +355,7 @@ class NetworkAdaptiveCruiseController:
         "lead" vehicle beyond velocity and steering commands.
     """
 
-    def __init__(self, gpio=None, car_physics=None, encoder_consumer=None, network_producer=None, is_sim_car=False):
+    def __init__(self, gpio=None, car_physics=None, encoder_consumer=None, is_sim_car=False):
         """
         Initializes the NetworkAdaptiveCruiseController class as long as the parameters are not
         None.
@@ -365,8 +365,12 @@ class NetworkAdaptiveCruiseController:
         :param encoder_consumer:
         :param network_producer:
         """
-        if not (gpio is None) or not (car_physics is None) or not (network_producer is None):
-            raise ValueError("One or more of the parameters in NetworkVelocityController was None!")
+        if (gpio is None): 
+            raise ValueError("The gpio parameter in NetworkVelocityController was None!")
+        if (car_physics is None):
+            raise ValueError("The car_physics parameter in NetworkVelocityController was None!")
+        if (encoder_consumer is None):
+            raise ValueError("The encoder_consumer parameter in NetworkVelocityController was None!")
         # TODO: Verify network producer/consumer is what I want
         self.is_sim_car = is_sim_car
         if self.is_sim_car is True:
@@ -377,7 +381,6 @@ class NetworkAdaptiveCruiseController:
         self.gpio = gpio
         self.car_physics = car_physics
         self.car = Car(0, 0.07)             # Mass is zero for now and 0.07 meters is diameter of tire
-        self.network_producer = network_producer
 
         # Network Controller Variables and Parameters for controls
         self.desired_velocity = None
@@ -401,6 +404,7 @@ class NetworkAdaptiveCruiseController:
         Resets Control Variables
         :return:
         """
+        self.desired_velocity = 0
         self.accumulated_error = 0
 
     def cruise_control(self):
@@ -439,6 +443,7 @@ class NetworkAdaptiveCruiseController:
 
         if self.is_sim_car is False:
             self.measured_velocity = self.encoder_consumer.get_speed()
+            print(self.measured_velocity)
         pi_controller_output = self.cruise_control()
         self.clamp(pi_controller_output)
         # Motor speed is between 0 - 10 where 0 is neutral and 10 is max throttle, we want to translate throttle
