@@ -169,6 +169,11 @@ def main():
             log.log_info("Smart network selected (smart-leader), beginning control loop")
             carphys = CarPhysics()
             network_controller = NetworkAdaptiveCruiseController(gpio, carphys, encoder_consumer_data, False)
+            # Define PId Terms
+            network_controller.set_desired_velocity(25)
+            network_controller.set_proportional_value(1)
+            network_controller.set_integral_value(0)
+            network_controller.set_derivative_value(0)
             network_controller.cruise_control_init()
             desired_velocity = 0  # millimeters per second
             speed = 0  # millimeters per second
