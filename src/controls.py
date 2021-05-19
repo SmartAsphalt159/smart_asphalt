@@ -431,7 +431,7 @@ class NetworkAdaptiveCruiseController:
 
         self.previous_velocity_error = velocity_error
         pi_out = proportional_expression + integral_expression + derivative_expression
-        print("P=", proportional_expression, " I=", integral_expression, " D=", derivative_expression)
+        # print("P=", proportional_expression, " I=", integral_expression, " D=", derivative_expression)
 
         return pi_out
 
@@ -445,12 +445,13 @@ class NetworkAdaptiveCruiseController:
             self.measured_velocity = self.encoder_consumer.get_speed()
             print(self.measured_velocity)
         pi_controller_output = self.cruise_control()
-        self.clamp(pi_controller_output)
+        adjusted_throttle = self.clamp(pi_controller_output)
+        self.gpio.set_motor_pwm(adjusted_throttle)
         # Motor speed is between 0 - 10 where 0 is neutral and 10 is max throttle, we want to translate throttle
         # clamp
         # pi_controller clean_up
         # We want to output the change in power
-        return pi_controller_output
+        return adjusted_throttle
 
     def clamp(self, pid_out):
         """ Meant to clamp and scale the value of the pid to a reasonable range for the motor function """
