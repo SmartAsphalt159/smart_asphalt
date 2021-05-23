@@ -6,16 +6,6 @@
 
 # Move Forward
 throttle 0.5
-wait 1
-# Turn right
-<<<<<<< HEAD
+wait 2
 throttle 0
-=======
-steer 10
-wait 1
-# Turn while moving
-steer 0
-throttle 0.5
-wait 1
->>>>>>> 7073bc5b851257a08b121c3cc64ed2a6fda3d1e3
 # Done

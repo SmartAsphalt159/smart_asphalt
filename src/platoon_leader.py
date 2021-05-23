@@ -15,7 +15,7 @@ from synch import (network_producer, encoder_producer, encoder_consumer, lidar_p
 from controls import *
 from lidar import Lidar
 from carphysics import CarPhysics
-from timing import get_current_time
+from timing import get_current_time, sleep_for
 from debug_tools import print_verbose
 from path_planner import PathPlanner
 
@@ -121,7 +121,7 @@ def main():
                 print(f"encoder_speed: {encoder_speed}")
                 packet = net_producer.get_packet()
                 if not packet:
-                    time.sleep(0.01)
+                    sleep_for(0.01)
                     continue
                 # print(f"str: {packet.steering}  thtl: {packet.throttle}")
                 controller.get_newest_steering_cmd(packet.steering)
@@ -140,7 +140,7 @@ def main():
         elif (c_type == "lidar"):
             # call lidar control system
             new_lidar = Lidar(False)
-            time.sleep(0.1)
+            sleep_for(0.1)
             carphys = CarPhysics()
             try:
                 controller = LidarControls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
@@ -166,7 +166,7 @@ def main():
             while True:
                 encoder_speed = controller.get_encoder_velocity()
                 # print(f"Speed = {encoder_speed}")
-                time.sleep(0.01)
+                sleep_for(0.01)
         elif c_type == "smart-leader":
             # log.log_info("Smart network selected (smart-leader), beginning control loop")
             network_debugging_flag = True
@@ -179,7 +179,7 @@ def main():
             network_controller.set_proportional_value(1)
             network_controller.set_integral_value(0)
             network_controller.set_derivative_value(0)
-            network_controller.cruise_control_init()
+            network_controller.cruise_control_init_set_point()
 
             # State Variable Initialization
             throttle = 0  # between 0 - 10
@@ -216,7 +216,7 @@ def main():
                 # log.log_info(log_data)
                 print_verbose(log_data, network_debugging_flag)
         else:
-            msg = "Input was not a valid type"
+            msg = "Input was not a valid control scheme, must be smart-leader, lidar, encoder_test, dumb"
             # log.log_error("Input was not a valid type")
             print_verbose(msg, True)
     except Exception as e:
@@ -228,7 +228,7 @@ def main():
     # exited from loop
 
     # lp.end_scan = True
-    time.sleep(0.2)
+    sleep_for(0.2)
     # halt other threads, they should exit naturally
     net_producer.halt_thread()
     # nc.halt_thread()
