@@ -15,8 +15,10 @@ from synch import (network_producer, encoder_producer, encoder_consumer, lidar_p
 from controls import *
 from lidar import Lidar
 from carphysics import CarPhysics
-from Packet import *
 from timing import get_current_time
+from debug_tools import print_verbose
+from path_planner import PathPlanner
+
 
 def main():
     # Dumb, smart, and lidar
@@ -104,7 +106,7 @@ def main():
         # Call control system
         # TODO: Update to a better design pattern, this is pretty rough
         if (c_type == "dumb"):
-            # call dumb contorl system
+            # call dumb control system
             new_lidar = Lidar(False)
 
             carphys = CarPhysics()
@@ -166,34 +168,58 @@ def main():
                 # print(f"Speed = {encoder_speed}")
                 time.sleep(0.01)
         elif c_type == "smart-leader":
-            log.log_info("Smart network selected (smart-leader), beginning control loop")
+            # log.log_info("Smart network selected (smart-leader), beginning control loop")
+            network_debugging_flag = True
+            is_simulation = False
             carphys = CarPhysics()
-            network_controller = NetworkAdaptiveCruiseController(gpio, carphys, encoder_consumer_data, False)
-            # Define PId Terms
-            network_controller.set_desired_velocity(25)
+            network_controller = NetworkAdaptiveCruiseController(gpio, carphys, encoder_consumer_data, is_simulation)
+            default_path = [(20, 0, 20), (0, 0, 20), (25, 0, 20)]
+            path_plan = PathPlanner(default_path)
+            # Define PID Terms
             network_controller.set_proportional_value(1)
             network_controller.set_integral_value(0)
             network_controller.set_derivative_value(0)
             network_controller.cruise_control_init()
-            desired_velocity = 0  # millimeters per second
-            speed = 0  # millimeters per second
+
+            # State Variable Initialization
             throttle = 0  # between 0 - 10
             steering = 0  # Currently is servo position not heading
-            timestamp = get_current_time()  # the time when message is sent
 
             while True:
+                # Sensor Acquisition
+                measured_speed = encoder_consumer_data.get_speed()
+                if measured_speed is None:
+                    msg = f"Platoon_Leader: measured_speed is {measured_speed}, " \
+                          f"there may be an issue with the encoder_consumer"
+                    print_verbose(msg, network_debugging_flag)
+                    raise ValueError(msg)
+
+                # Acquire Desired Vehicle State, meant for logging
+                desired_vel, desired_steer_pwm, time = path_plan.get_next_command()
+                desired_velocity = desired_vel  # meters per second
+                desired_steering = desired_steer_pwm  # Currently is servo position not heading
+
+                # Control Loop
+                network_controller.set_desired_velocity(desired_velocity)
                 network_controller.control_loop()
-                speed = encoder_consumer_data.get_speed()
+                gpio.set_servo_pwm(desired_steering)
+
+                # Updating State Variables
                 timestamp = get_current_time()
-                #sn.broadcast_data(throttle, steering, speed, timestamp)88
-                # logging Telemetry Data
-                log_data = f"velocity: {speed}mps"
-                log.log_info(log_data)
-                print(log_data)
+
+                # Network Periodic Messages (Based on Control Loop Time)
+                sn.broadcast_data(throttle, steering, measured_speed, timestamp)
+
+                # Logging Telemetry Data
+                log_data = f"velocity: {measured_speed}mps, desired_velocity: {desired_velocity}mps," \
+                           f" desired_steering: {desired_steering} pwm signal"
+                # log.log_info(log_data)
+                print_verbose(log_data, network_debugging_flag)
         else:
-            log.log_error("Input was not a valid type")
+            msg = "Input was not a valid type"
+            # log.log_error("Input was not a valid type")
+            print_verbose(msg, True)
     except Exception as e:
-        print("im here!")
         print(e)
 
         err = "Exitted loop - Exception: " + str(e)

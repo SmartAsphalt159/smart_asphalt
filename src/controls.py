@@ -396,10 +396,10 @@ class NetworkAdaptiveCruiseController:
         self.pid_limit_max = 10  # Can be modified
         self.pid_limit_min = 0   # Can be modified
         self.previous_velocity_error = 0
-        #self.steering_output_clamp = (-10, 10)  # clamps output between these two values
+        # self.steering_output_clamp = (-10, 10)  # clamps output between these two values
         self.pid_out_scaling = 1/100
 
-    def cruise_control_init(self):
+    def cruise_control_init_set_point(self):
         """
         Resets Control Variables
         :return:
@@ -438,6 +438,8 @@ class NetworkAdaptiveCruiseController:
     def control_loop(self):
         """
         Executes the Loop for the network cruise controller and verifies mode of operation is sim or real
+        Reference: https://code.activestate.com/recipes/577231-discrete-pid-controller/
+        Reference: https://github.com/ivmech/ivPID
         :return: None
         """
 
@@ -456,7 +458,7 @@ class NetworkAdaptiveCruiseController:
     def clamp(self, pid_out):
         """ Meant to clamp and scale the value of the pid to a reasonable range for the motor function """
         scaled_pid = self.pid_out_scaling * pid_out
-        clamped_adjustment = max(min(5, scaled_pid), 0)
+        clamped_adjustment = max(min(self.pid_limit_max, scaled_pid), self.pid_limit_min)
         return clamped_adjustment
 
     def anti_windup(self):
@@ -476,7 +478,14 @@ class NetworkAdaptiveCruiseController:
         :param desired_velocity: the set point to reach measured in meters per second (m/s)
         :return: None
         """
+        self.cruise_control_init_set_point()
         self.desired_velocity = desired_velocity
+
+    def get_desired_velocity(self):
+        """
+        :return: The desired velocity in m/s
+        """
+        return self.desired_velocity
 
     def set_proportional_value(self, pval):
         self.proportional_constant = pval
