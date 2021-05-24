@@ -15,7 +15,7 @@ from controls import *
 from lidar import Lidar
 from carphysics import CarPhysics
 from Packet import *
-from timing import get_current_time
+from timing import get_current_time, sleep_for
 
 def main():
     # Dumb, smart, and lidar
@@ -114,7 +114,7 @@ def main():
                 print(f"encoder_speed: {encoder_speed}")
                 packet = net_producer.get_packet()
                 if not packet:
-                    time.sleep(0.01)
+                    sleep_for(0.01)
                     continue
                 # print(f"str: {packet.steering}  thtl: {packet.throttle}")
                 controller.get_newest_steering_cmd(packet.steering)
@@ -133,7 +133,7 @@ def main():
         elif (c_type == "lidar"):
             # call lidar control system
             new_lidar = Lidar(False)  # TODO: Why do we still do this?
-            time.sleep(0.1)  # TODO: Is this necessary and why?
+            sleep_for(0.1)  # TODO: Is this necessary and why?
             carphys = CarPhysics()
             try:
                 controller = LidarControls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp)
@@ -159,12 +159,14 @@ def main():
             while True:
                 encoder_speed = controller.get_encoder_velocity()
                 # print(f"Speed = {encoder_speed}")
-                time.sleep(0.01)
+                time.sleep_for(0.01)
         elif c_type == "smart-follower":
-            log.log_info("Smart network selected (smart-follower), beginning control loop")
+            msg = "Smart network selected (smart-follower), beginning control loop"
+            print(msg)
+            # log.log_info("Smart network selected (smart-follower), beginning control loop")
 
             new_lidar = Lidar(False)
-            time.sleep(0.1)
+            sleep_for(0.1)
             carphys = CarPhysics()
 
             try:
@@ -179,32 +181,35 @@ def main():
             throttle = 0  # between 0 - 10
             steering = 0  # Currently is servo position not heading
             timestamp = get_current_time()  # the time when message is sent
-
-            log.log_info("Smart-Network Initialization Complete, Beginning Control Loop")
+            msg = "Smart-Network Initialization Complete, Beginning Control Loop"
+            # log.log_info("Smart-Network Initialization Complete, Beginning Control Loop")
+            print(msg)
             while True:
                 # Acquiring sensor data
                 controller.get_lidar_data()
                 vehicle_velocity = controller.get_encoder_velocity()  # (m/s)
                 strg, accl = controller.control_loop(vehicle_velocity)
                 log_data = f"strg: {strg} accel: {accl} velocity: {vehicle_velocity}mps"
-                log.log_info(log_data)
+                # log.log_info(log_data)
                 print(log_data)
                 # speed = encoder_consumer_data.get_speed()
                 # timestamp = get_current_time()
                 # sn.broadcast_data(throttle, steering, speed, timestamp)
         else:
-            log.log_error("Input was not a valid type")
+            err_msg = "Input was not a valid type"
+            # log.log_error("Input was not a valid type")
+            print(err_msg)
     except Exception as e:
         print("im here!")
         print(e)
 
         err = "Exitted loop - Exception: " + str(e)
         raise ValueError(err)
-        log.log_error(err)
+        # log.log_error(err)
     # exited from loop
 
     # lp.end_scan = True
-    time.sleep(0.2)
+    sleep_for(0.2)
     # halt other threads, they should exit naturally
     net_producer.halt_thread()
     # nc.halt_thread()
