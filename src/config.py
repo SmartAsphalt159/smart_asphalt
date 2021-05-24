@@ -61,11 +61,11 @@ class config:
 	def get_param(self, param_type, header, term):
 		#if statement overloading
 		if(param_type == "str"):
-			return conf.config_obj.get(header, term)
+			return self.config_obj.get(header, term)
 		elif param_type == "int":
-			return conf.config_obj.getint(header, term)
+			return self.config_obj.getint(header, term)
 		elif param_type == "float":
-			return conf.config_obj.getfloat(header, term)
+			return self.config_obj.getfloat(header, term)
 		else:
 			#an error occured
 			return -1
