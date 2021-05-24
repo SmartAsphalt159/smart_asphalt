@@ -17,6 +17,7 @@ from synch import (network_producer, network_consumer, encoder_producer, encoder
 from controls import *
 from lidar import Lidar
 from carphysics import CarPhysics
+from config import config
 
 def main():
 
@@ -38,39 +39,43 @@ def main():
     encoder_q = Queue(0)
     lidar_q = Queue(0)
 
+    #INIT CONFIG
+    conf = config()
+    conf.read_config()
+
     #NETWORKING VARS
-    recvport = 1
-    sendport = 2
-    timeout = 2  # seconds
-    net_thread_timeout = 5
+    recvport = conf.get_param("int", "network", "recvport")
+    sendport = conf.get_param("int", "network", "sendport")
+    timeout =  conf.get_param("int", "network", "timeout")
     sn = network.send_network(sendport)
 
+    #net_thread_timeout = 5
+
     # GPIO vars
-    motor_ch = 32
-    servo_ch = 33
+    motor_ch = conf.get_param("int", "gpio", "motor")
+    servo_ch = conf.get_param("int", "gpio", "servo")
 
     # ENCODER VARS
-    # TODO: update to true value
-    enc_channel = 19
-    enc_timeout = 2
-    sample_wait = 0.1
-    enc_thread_timeout = 5
+    enc_channel = conf.get_param("int", "encoder", "channel")
+    enc_timeout = conf.get_param("int", "encoder", "timeout")
+    sample_wait = conf.get_param("int", "encoder", "sample_wait")
+    #enc_thread_timeout = 5
 
     # LIDAR VARS
-    lidar_channel = "/dev/ttyUSB0"
-    lid_timeout = 10
-    lid_thread_timeout = 5
+    lidar_channel = conf.get_param("str", "lidar", "channel")
+    lidar_timeout = conf.get_param("int", "lidar", "timeout")
+    #lid_thread_timeout = 5
 
     #CONTROL VARS
     #Velocity constants
-    vp = 0.7
-    vi = 0
-    vd = 2
-    vk = 1
+    vp = conf.get_param("int", "velocity", "p-term")
+    vi = conf.get_param("int", "velocity", "i-term")
+    vd = conf.get_param("int", "velocity", "d-term")
+    vk = conf.get_param("int", "velocity", "k-term")
     #Steering constants
-    sp = 0.5
-    si = 0
-    sd = 0.3
+    sp = conf.get_param("int", "steering", "p-term")
+    si = conf.get_param("int", "velocity", "i-term")
+    sd = conf.get_param("int", "velocity", "d-term")
 
     gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
 
