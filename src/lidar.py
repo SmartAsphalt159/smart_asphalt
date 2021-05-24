@@ -239,7 +239,7 @@ class Lidar():
         self.scan_read = True
         self.end_scan = False
         self.running = True
-        self.datalogger = Data_logger("lidar")
+        # self.datalogger = Data_logger("lidar")
         self.scan_count = 0
 
     def restart(self):
@@ -264,7 +264,7 @@ class Lidar():
         Creates loop that constantly updates a 360 degree slice. To close loop
         make self.end_scan = True
         """
-        self.start_file()
+        # self.start_file()
         scan = []
         start = 360
         last = -1
@@ -284,7 +284,7 @@ class Lidar():
             self.scan_count+=1
             if self.end_scan or not self.running:
                 print(self.end_scan)
-                self.close_file()
+                # self.close_file()
                 break
             #print(f"since last start: {time()-start_of_loop} angle: {angle}")
             start_of_loop = time()
@@ -358,7 +358,7 @@ class Lidar():
                 if angle < 90 or angle > 270:
                     scan.append((angle, distance,quality))
                     #quality is placeholder for intensity later on
-                    self.datalogger.update_df([time(), angle, distance, quality]) 
+                    # self.datalogger.update_df([time(), angle, distance, quality]) 
                     #print(f"appended angle: {angle}")
                 #else:
                     #print(f"filtered angle: {angle}")
@@ -376,8 +376,8 @@ class Lidar():
 
             #log data to file every 10 scans (can change number later)
             if (self.scan_count % 100 == 0):
-                self.datalogger.log_data()
-               
+                # self.datalogger.log_data()
+                continue
             if self.end_scan or not self.running:
                 break
 
@@ -422,7 +422,7 @@ class Lidar():
             polar[index] = (t_ang + 90 if t_ang + 90 < 360 else t_ang - 270, pt[1])
 
         polar.sort()
-        for index, (angle, distance, quality) in enumerate(polar):
+        for index, (angle, distance) in enumerate(polar):
             if index == len(polar)-1:
                 if abs(distance-polar[0][1]) > threshold:  # make this loop around
                     t_ang = polar[0][0]
@@ -438,19 +438,19 @@ class Lidar():
         for index, angle in enumerate(break_list):
             if index == len(break_list)-1:
                 temp = ([], [], [])
-                for a, d ,q in polar:
+                for a, d in polar:
                     if a > break_list[index] or a < break_list[0]:
                         a = a - 90 if a - 90 > 0 else a + 270
                         lx, ly = self.polar_to_cartesian(a, d)
 
                         temp[0].append(lx)
                         temp[1].append(ly)
-                        temp[2].append(q)
+                        # temp[2].append(q)
                 broken_objects.append(temp)
 
             else:
                 temp = ([], [], [])
-                for a, d, q in polar:
+                for a, d in polar:
 
                     if a > break_list[index] and a < break_list[index+1]:
                         a = a - 90 if a - 90 > 0 else a + 270
@@ -458,7 +458,7 @@ class Lidar():
                         lx, ly = self.polar_to_cartesian(a, d)
                         temp[0].append(lx)
                         temp[1].append(ly)
-                        temp[2].append(q)
+                        # temp[2].append(q)
                 broken_objects.append(temp)
 
         return broken_objects
