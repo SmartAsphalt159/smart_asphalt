@@ -58,7 +58,7 @@ def main():
     # ENCODER VARS
     enc_channel = conf.get_param("int", "encoder", "channel")
     enc_timeout = conf.get_param("int", "encoder", "timeout")
-    sample_wait = conf.get_param("int", "encoder", "sample_wait")
+    sample_wait = conf.get_param("float", "encoder", "sample_wait")
     #enc_thread_timeout = 5
 
     # LIDAR VARS
@@ -68,14 +68,14 @@ def main():
 
     #CONTROL VARS
     #Velocity constants
-    vp = conf.get_param("int", "velocity", "p-term")
-    vi = conf.get_param("int", "velocity", "i-term")
-    vd = conf.get_param("int", "velocity", "d-term")
-    vk = conf.get_param("int", "velocity", "k-term")
+    vp = conf.get_param("float", "velocity", "p-term")
+    vi = conf.get_param("float", "velocity", "i-term")
+    vd = conf.get_param("float", "velocity", "d-term")
+    vk = conf.get_param("float", "velocity", "k-term")
     #Steering constants
-    sp = conf.get_param("int", "steering", "p-term")
-    si = conf.get_param("int", "velocity", "i-term")
-    sd = conf.get_param("int", "velocity", "d-term")
+    sp = conf.get_param("float", "steering", "p-term")
+    si = conf.get_param("float", "steering", "i-term")
+    sd = conf.get_param("float", "steering", "d-term")
 
     gpio = GPIO_Interaction(enc_channel, servo_ch, motor_ch)
 
