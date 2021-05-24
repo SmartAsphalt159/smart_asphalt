@@ -508,7 +508,7 @@ class LidarNetworkControls(Controls):
 
     def __init__(self, vp, vi, vd, vk, sp, si, sd, lidar, gpio, carphys, encoder_consumer, lidar_consumer,
                  network_producer, ref=0):
-        super(LidarControls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer, network_producer)
+        super(LidarNetworkControls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer, network_producer)
         self.velocity_P = vp
         self.velocity_I = vi
         self.velocity_D = vd
