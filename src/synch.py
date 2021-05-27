@@ -22,7 +22,7 @@ from lidar import Lidar
 class queue_skeleton(threading.Thread):
 
     """ Constructor """
-    def __init__(self, inque, outque, logger, timeout):
+    def __init__(self, inque, outque, timeout, logger=None):
         threading.Thread.__init__(self)
         self.inque = inque
         self.outque = outque
@@ -35,7 +35,7 @@ class queue_skeleton(threading.Thread):
         try:
             self.outque.put(data)
         except:
-            self.logger.log_error("Failed to enqueue data")
+            # self.logger.log_error("Failed to enqueue data")
             return -1
 
         return 0
@@ -46,7 +46,7 @@ class queue_skeleton(threading.Thread):
             data = self.inque.get(timeout=self.timeout)
             self.inque.task_done()
         except:
-            self.logger.log_error("Failed to dequeue data")
+            # self.logger.log_error("Failed to dequeue data")
             return -1
 
         return data
@@ -66,7 +66,7 @@ class network_producer(queue_skeleton, recv_network):
         """
             Initializes the network producer.
         """
-        queue_skeleton.__init__(self, None, out_que, logger, timeout)
+        queue_skeleton.__init__(self, None, out_que, timeout, logger)
         recv_network.__init__(self, port)
         self.running = True
         self.packet = None
@@ -84,12 +84,14 @@ class network_producer(queue_skeleton, recv_network):
                 # Setting timeout of 1 second
                 packet, _ = self.listen_data(0.001)
                 if packet == -1:
-                    self.logger.log_error("Socket timeout occured")
+                    # self.logger.log_error("Socket timeout occured")
+                    print("Socket timeout occured")
                 else:
                     self.packet = packet
             except:
                 if(self.check_full()):
-                    self.logger.log_error("Network Producer output queue is full")
+                    # self.logger.log_error("Network Producer output queue is full")
+                    print("Network Producer output queue is full")
 
 # NOT UTILIZED ***
 # class network_consumer(queue_skeleton):
@@ -120,7 +122,7 @@ class network_producer(queue_skeleton, recv_network):
 class encoder_producer(queue_skeleton, Encoder):
     """Constructor"""
     def __init__(self, out_que, channel, logger, timeout, sample_wait):
-        queue_skeleton.__init__(self, None, out_que, logger, timeout)
+        queue_skeleton.__init__(self, None, out_que, timeout, logger)
         Encoder.__init__(self, channel)
         self.running = True
         self.sample_wait = sample_wait
@@ -144,11 +146,11 @@ class encoder_producer(queue_skeleton, Encoder):
                     next_t = time.time()
                 except serial.SerialTimeoutException:
                     print("Serial Timeout")
-                    self.logger.log_error("Serial Timeout error")
+                    # self.logger.log_error("Serial Timeout error")
                 except serial.SerialException as e:
                     print(e)
                     print("help")
-                    self.logger.log_error(e)
+                    # self.logger.log_error(e)
                 except Exception as e:
                     print(e)
                     raise e
@@ -156,20 +158,20 @@ class encoder_producer(queue_skeleton, Encoder):
                     j_data = json.loads(data)
                     tally = j_data["tally"]
                     delta_ms = j_data["delta_time"]
-                    #print("tally: ",tally," dt: ", delta_ms)
+                    # print("tally: ",tally," dt: ", delta_ms)
                     self.sample_speed(tally, delta_ms)
                 except Exception as e:
                     print(e)
             except Exception as e:
                 print(e)
-                self.logger.log_error("Failed to read encoder value")
+                # self.logger.log_error("Failed to read encoder value")
         print("Out of loop")
 
 
 class encoder_consumer(queue_skeleton):
     """Constructor"""
     def __init__(self, in_que, out_que, logger, thr_timeout):
-        queue_skeleton.__init__(self, in_que, out_que, logger, thr_timeout)
+        queue_skeleton.__init__(self, in_que, out_que, thr_timeout, logger)
         self.running = True
         self.timeout = thr_timeout
         self.speed = 0
@@ -192,7 +194,8 @@ class encoder_consumer(queue_skeleton):
                 try:
                     self.speed = self.dequeue()
                 except:
-                    self.logger.log_error("Could not deque encoder data")
+                    # self.logger.log_error("Could not deque encoder data")
+                    print("Could not deque encoder data")
             #timeout becasue there is no data in the queue, will be respawned later
             #else:
             #    return
@@ -201,7 +204,7 @@ class encoder_consumer(queue_skeleton):
 class lidar_producer(queue_skeleton, Lidar):
     """Constructor"""
     def __init__(self, out_que, channel, logger, timeout):
-        queue_skeleton.__init__(self, None, out_que, logger, timeout)
+        queue_skeleton.__init__(self, None, out_que, timeout, logger)
         Lidar.__init__(self, True)
         self.running = True
 
@@ -216,14 +219,14 @@ class lidar_producer(queue_skeleton, Lidar):
         except Exception as e:
             print(e)
             print("failed to read lidar value")
-            self.logger.log_error("Failed to read lidar value")
+            # self.logger.log_error("Failed to read lidar value")
 
 
 class lidar_consumer(queue_skeleton, Lidar):
 
     """Constructor"""
     def __init__(self, in_que, out_que, logger, thr_timeout):
-        queue_skeleton.__init__(self, in_que, out_que, logger, thr_timeout)
+        queue_skeleton.__init__(self, in_que, out_que, thr_timeout, logger)
         self.running = True
         self.timeout = thr_timeout
         self.scan = None
@@ -245,7 +248,8 @@ class lidar_consumer(queue_skeleton, Lidar):
                     # set scan to local variable
                     self.scan = self.dequeue()
                 except:
-                    self.logger.log_error("Could not deque lidar scan")
+                    # self.logger.log_error("Could not deque lidar scan")
+                    print("Could not deque lidar scan")
             # timeout becasue there is no data in the queue, will be respawned later
             # else:
             #    return
