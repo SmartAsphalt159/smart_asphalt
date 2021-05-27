@@ -9,18 +9,19 @@ import pandas as pd
 import numpy as np 
 import logging
 
+
 class Sys_logger():
 
     """ sys logging constructor """
     def __init__(self, name):
-        #setting up logger
+        # setting up logger
         self.logger = logging.getLogger(name)
-        #set logger so that it will display all message types 
+        # set logger so that it will display all message types
         self.logger.root.setLevel(logging.NOTSET)
-        #file handler for debug messages
+        # file handler for debug messages
         fh = logging.FileHandler("smart_asphalt.log")
         fh.setLevel(logging.DEBUG)
-        #create formatter
+        # create formatter
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
         fh.setFormatter(formatter)
         self.logger.addHandler(fh)
@@ -38,53 +39,51 @@ class Sys_logger():
     def log_debug(self, msg):
         self.logger.debug(msg)
 
+
 class Data_logger:
 
-    """ data logger Constructor """
     def __init__(self, sensor):
+        """ data logger Constructor """
         self.sensor = sensor
         self.iteration = 0
-        self.file_state = 0 #variable for keeping track of file naming, 0: need to get name, 1: named
-        self.sname = "" #file name
+        self.file_state = 0  # variable for keeping track of file naming, 0: need to get name, 1: named
+        self.sname = ""  # file name
 
-        #different constructor based on sensor, separated beacuse of sampling rates
+        # different constructor based on sensor, separated because of sampling rates
         if(sensor == "network"):
             self.df =  pd.DataFrame(columns = ["Timestamp", "Braking", "Steering", "Speed"])
         elif(sensor == "lidar"):
-            #TODO @Cayman: Please verify this
             self.df =  pd.DataFrame(columns = ["Timestamp", "Angle", "Distance", "Intensity"])
         else:
             raise NameError("Invalid sensor choice for data logger")
 
-    """ Function to get updated log name based on prior logs """
     def get_log_name(self):
-        #get iteration
+        """ Function to get updated log name based on prior logs """
+        # get iteration
         it_r = open("iteration.txt", "r")
         line = it_r.readline()
         self.iteration = int(line.strip())
         print(self.iteration)
         it_r.close()
 
-        #write new iteration for next power on
+        # write new iteration for next power on
         it_w = open("iteration.txt", "w")
         it_w.write(str(int(self.iteration)+1))
         it_w.close()
 
         self.sname = str(str(self.sensor) + str(self.iteration) + ".csv")
-        
 
-    """ Function for writing the data frame to a csv """
     def log_data(self):
-
-        if self.file_state == 0: #get new file name if it needs to be named
+        """ Function for writing the data frame to a csv """
+        if self.file_state == 0: # get new file name if it needs to be named
             self.get_log_name()
-            #open new logfile 
+            # open new logfile
             self.df.to_csv(path_or_buf=self.sname, mode='w', index=False)
             self.file_state = 1
-        else: #append to file
+        else: # append to file
             self.df.to_csv(path_or_buf=self.sname, mode='a', index=False, header=False)
                
-        self.df = self.df.iloc[0:0] #clear existing data from the dataframe
+        self.df = self.df.iloc[0:0] # clear existing data from the dataframe
 
 
     """ Format data into append ready data frame row """
