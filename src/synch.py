@@ -218,6 +218,7 @@ class lidar_producer(queue_skeleton, Lidar):
             print("failed to read lidar value")
             self.logger.log_error("Failed to read lidar value")
 
+
 class lidar_consumer(queue_skeleton, Lidar):
 
     """Constructor"""
@@ -227,25 +228,24 @@ class lidar_consumer(queue_skeleton, Lidar):
         self.timeout = thr_timeout
         self.scan = None
 
-
     def halt_thread(self):
         self.running = False
 
-    #return the latest scan
+    # return the latest scan
 
     def run(self):
         while(self.running):
 
-            #verify that queue isn't empty
-            #if(self.inque.check_empty()):
+            # verify that queue isn't empty
+            # if(self.inque.check_empty()):
             #    timing.sleep_for(self.timeout)
 
             if(not self.check_empty()):
                 try:
-                    #set scan to local variable
+                    # set scan to local variable
                     self.scan = self.dequeue()
                 except:
                     self.logger.log_error("Could not deque lidar scan")
-            #timeout becasue there is no data in the queue, will be respawned later
-            #else:
+            # timeout becasue there is no data in the queue, will be respawned later
+            # else:
             #    return

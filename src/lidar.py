@@ -2,11 +2,17 @@
 from time import time
 from math import sqrt, cos, sin, pi, floor, tan, atan
 from rplidar import RPLidar
+from debug_tools import print_verbose
 import numpy as np
 from logger import Data_logger
 
+# Set to False to stop printing
+debug_flag = True
+
+
 class Object:
-    def __init__(self, pixels, filter_len, last_time, threshold_size,rel_velocity, last_midpoint, box_len, sample, obj_found,err_fac=1):
+    def __init__(self, pixels, filter_len, last_time, threshold_size,rel_velocity, last_midpoint, box_len,
+                 sample, obj_found, err_fac=1):
         self.pixels = pixels
         self.filter_len = filter_len
         self.last_time = last_time
@@ -19,8 +25,8 @@ class Object:
         self.obj_found = obj_found
 
         self.size = None
-        self.midpoint = None    #found from taking center of box
-        self.center = None      #center of line found
+        self.midpoint = None    # found from taking center of box
+        self.center = None      # center of line found
         self.angle = None
         self.correct_object_score = None
         self.last_pixels = None
@@ -28,22 +34,19 @@ class Object:
 
         if not self.len_filter():
             self.passed = False
-
             return None
 
         self.find_size()
 
         if not self.size_filter():
             self.passed = False
-
             return None
 
-        print("size x:",self.size[0]," y: ",self.size[1])
-        print("at:",self.midpoint)
+        debug_msg = f"Size x: {self.size[0]} y: {self.size[1]}\nAt: {self.midpoint}"
+        print_verbose(debug_msg, debug_flag)
 
         if not self.obj_found:
             self.passed = True
-
             return None
         """
         if not self.location_filter():
@@ -56,15 +59,16 @@ class Object:
             return None
         """
     def len_filter(self):
-        #print("len = ", len(self.pixels[0]))
+        # print("len = ", len(self.pixels[0]))
         if len(self.pixels[0]) >  self.filter_len:
             return True
         else:
             return False
 
-    """pass this object through filter. Objects too large/small are cut"""
     def size_filter(self):
-
+        """
+            Pass this object through filter. Objects too large/small are cut
+        """
         if self.size[0] > self.threshold_size or self.size[1] > self.threshold_size:
             return False
         else:
@@ -89,8 +93,10 @@ class Object:
             else:
                 return False
 
-    """find a size of box that all samples fit into"""
     def find_size(self):
+        """
+            Find a size of box that all samples fit into
+        """
         minx = maxx = self.pixels[0][0]
         miny = maxy = self.pixels[1][0]
 
@@ -110,8 +116,10 @@ class Object:
         self.size = (maxx-minx, maxy-miny)
         self.midpoint = (minx + self.size[0]/2,miny+ self.size[1]/2)
 
-    """compare last object to this object and return likely hood of being the same"""
     def find_likeness(self):
+        """
+            Compare last object to this object and return likely hood of being the same
+        """
         if self.midpoint[0] <= -200:
             return 0
         else:
@@ -124,30 +132,30 @@ class Object:
             return 1000/l
         return likeness
 
-    def find_line_points(self,threshold):   #refrenced from https://github.com/Robotics-kosta/AMR-Line-extraction-from-Lidar-sensor-with-Split-and-Merge-algorithm/blob/master/src/main.py
+    def find_line_points(self, threshold):   # refrenced from https://github.com/Robotics-kosta/AMR-Line-extraction-from-Lidar-sensor-with-Split-and-Merge-algorithm/blob/master/src/main.py
         points = np.transpose(np.array(self.pixels))
-        lines = self.SAM(points,threshold)
-        return lines    #returns lines as endpoints
+        lines = self.SAM(points, threshold)
+        return lines    # returns lines as endpoints
 
-    def SAM(self,points,threshold):
-        max_d,index = self.find_distant(points)
+    def SAM(self, points, threshold):
+        max_d, index = self.find_distant(points)
         if max_d > threshold:
-            points1 = self.SAM(points[:index+1],threshold)
-            points2 = self.SAM(points[index:],threshold)
-            npoints = np.vstack((points1[:-1],points2))
+            points1 = self.SAM(points[:index+1], threshold)
+            points2 = self.SAM(points[index:], threshold)
+            npoints = np.vstack((points1[:-1], points2))
         else:
-            npoints = np.vstack((points[0],points[-1]))
+            npoints = np.vstack((points[0], points[-1]))
         return npoints
 
-    def find_distant(self,points):
+    def find_distant(self, points):
         max_d = 0
         index = -1
-        for i in range(1,points.shape[0]):
-            d = self.get_d(points[i],points[0],points[-1])
+        for i in range(1, points.shape[0]):
+            d = self.get_d(points[i], points[0], points[-1])
             if (d > max_d):
                 index = i
                 max_d = d
-        return (max_d,index)
+        return (max_d, index)
 
     def get_d(self, p, pstart, pend):
         if np.all(np.equal(pstart, pend)):
@@ -221,10 +229,10 @@ class Object:
             return lines
 
 
-class Lidar():
-    def __init__(self, scanner, USB_port='/dev/ttyUSB0'):
+class Lidar:
+    def __init__(self, scanner, usb_port="/dev/ttyUSB0"):
         if scanner:
-            self.lidar = RPLidar(USB_port)
+            self.lidar = RPLidar(usb_port)
             self.lidar.stop()
             self.lidar.connect()
             self.iterator = self.lidar.iter_measurments(1000)
@@ -259,10 +267,9 @@ class Lidar():
         self.f.close()
 
     def start_scan(self):
-        # TODO: Implement into Producer consumer... always running
         """
-        Creates loop that constantly updates a 360 degree slice. To close loop
-        make self.end_scan = True
+            Creates loop that constantly updates a 360 degree slice. To close loop
+            make self.end_scan = True
         """
         # self.start_file()
         scan = []
@@ -270,7 +277,7 @@ class Lidar():
         last = -1
         count = 0
         first = True    # first measurement is always junk
-        print("Starting scan")
+        print_verbose("Starting scan", debug_flag)
         c = 0
         dt = 0
         then = time()
@@ -279,38 +286,38 @@ class Lidar():
         end_of_loop = then
         t = then
         for new_scan, quality, angle, distance in self.iterator:
-            #print("\n")
-            #increment the scan count for logging
+            # print("\n")
+            # increment the scan count for logging
             self.scan_count+=1
             if self.end_scan or not self.running:
                 print(self.end_scan)
                 # self.close_file()
                 break
-            #print(f"since last start: {time()-start_of_loop} angle: {angle}")
+            # print(f"since last start: {time()-start_of_loop} angle: {angle}")
             start_of_loop = time()
-            #print(f"since last end of loop: {start_of_loop-end_of_loop}")
+            # print(f"since last end of loop: {start_of_loop-end_of_loop}")
 
             c += 1
             t = time()
             if quality == 0 and angle == 0 and distance == 0:
-                #print(f"time to run {time()-start_of_loop}")
+                # print(f"time to run {time()-start_of_loop}")
                 end_of_loop = time()
-                #print("BAD QUALITY")
+                # print("BAD QUALITY")
                 continue
-            #print(f"quality check {time()-t}")
+            # print(f"quality check {time()-t}")
 
             t = time()
             if last == -1:
                 if first:
                     if angle > 90 and angle < 270:
                         first = False
-                        #print(f"time to run {time()-start_of_loop}")
+                        # print(f"time to run {time()-start_of_loop}")
                         end_of_loop = time()
-                        #print("DUMPING FIRST")
+                        # print("DUMPING FIRST")
                         continue
                     else:
-                        #print("NOT DUMPING FIRST")
-                        #print(f"time to run {time()-start_of_loop}")
+                        # print("NOT DUMPING FIRST")
+                        # print(f"time to run {time()-start_of_loop}")
                         end_of_loop = time()
                         continue
                 start_time = time()
@@ -318,13 +325,13 @@ class Lidar():
                 last = angle+0.5
                 if quality > 1 and distance > 1:
                     if angle < 90 or angle > 270:
-                        scan.append((angle,distance,quality))
-                #print(f"time to run {time()-start_of_loop}")
+                        scan.append((angle, distance, quality))
+                # print(f"time to run {time()-start_of_loop}")
                 end_of_loop = time()
-                #print("APPENDING ANGLE")
+                # print("APPENDING ANGLE")
                 continue
             count += 1
-            #print(f"last check {time()-t}")
+            # print(f"last check {time()-t}")
             t = time()
 
             if last < start and angle > start and count > 30:
@@ -335,46 +342,45 @@ class Lidar():
                 count = 0
                 now = time()
                 dt = now-then
-                print("since last scan: ", dt)
-                
-                print("Time to write: ",time()-now) 
-                #print("since start: ", now-start_:ime)
+                print_verbose(f"since last scan: {dt}", debug_flag)
+                print_verbose(f"Time to write: {time()-now}", debug_flag)
+                # print("since start: ", now-start_:ime)
                 now=time()
                 then = now
                 start_time = now
-                #print("Measurements: ",c)
+                # print("Measurements: ",c)
                 c = 0
-                #print("Full scan completed")
+                # print("Full scan completed")
                 scan = []
-                #print(f"time to run {time()-start_of_loop}")
-                #print(f"Ending angle {angle}\n")
-                print("--------------------------------------------")
+                # print(f"time to run {time()-start_of_loop}")
+                # print(f"Ending angle {angle}\n")
+                print_verbose("--------------------------------------------", debug_flag)
                 end_of_loop = time()
                 continue
-            #print(f"end scan check{time()-t}")
+            # print(f"end scan check{time()-t}")
 
             t = time()
             if quality > 1 and distance > 1:
                 if angle < 90 or angle > 270:
                     scan.append((angle, distance,quality))
-                    #quality is placeholder for intensity later on
+                    # quality is placeholder for intensity later on
                     # self.datalogger.update_df([time(), angle, distance, quality]) 
-                    #print(f"appended angle: {angle}")
-                #else:
-                    #print(f"filtered angle: {angle}")
-            #else:
-                #print(f"q: {quality} d: {distance}")
-            #print(f"quality and angle check {time()-t}")
+                    # print(f"appended angle: {angle}")
+                # else:
+                    # print(f"filtered angle: {angle}")
+            # else:
+                # print(f"q: {quality} d: {distance}")
+            # print(f"quality and angle check {time()-t}")
             t = time()
             last = angle
 
-            #print(f"self.end_scan and angle last {time()-t}")
-            #print("END OF LOOP")
-            #print(f"time to run {time()-start_of_loop}")
+            # print(f"self.end_scan and angle last {time()-t}")
+            # print("END OF LOOP")
+            # print(f"time to run {time()-start_of_loop}")
             end_of_loop = time()
             t = time()
 
-            #log data to file every 10 scans (can change number later)
+            # log data to file every 10 scans (can change number later)
             if (self.scan_count % 100 == 0):
                 # self.datalogger.log_data()
                 continue
@@ -390,7 +396,7 @@ class Lidar():
 
     def get_scan(self):
         try:
-            #print("In get_scan")
+            # print("In get_scan")
             scan = self.new_scan
         except Exception as e:
             print(e)
@@ -414,7 +420,7 @@ class Lidar():
 
     def break_DCs(self, polar, threshold, length):      # tries to break up scan by discontinuities
         """
-        rotating 90 degrees then reverting before conversion to get around discontinuities around theta = 0/360
+            rotating 90 degrees then reverting before conversion to get around discontinuities around theta = 0/360
         """
         break_list = []
         for index, pt in enumerate(polar):
@@ -476,13 +482,13 @@ class Lidar():
             else:
                 line = lines[0]
             obj.set_center(line[1])
-            print(line)
+            print_verbose(f"Line: {line}", debug_flag)
             return obj, line
         else:
-            print("No object found :(")
+            print_verbose("No object found :(", debug_flag)
             return None
 
-    def find_main_line(self, lines): #line: [angle center length]
+    def find_main_line(self, lines): # line: [angle center length]
         if self.last_line:
             diffs = [abs(self.last_line[0]-lines[0][0]), abs(self.last_line[0]-lines[0][0]+180), abs(self.last_line[0]-lines[0][0]-180)]
             min_difference, index = min(diffs), 0
@@ -497,10 +503,10 @@ class Lidar():
         else:
             min_angle = abs(lines[0][0])
             index = 0
-            for i,l in enumerate(lines):
+            for i, l in enumerate(lines):
                 angle, center, length = l
                 if abs(angle) < min_angle:
-                    min_angle,index = abs(angle), i
+                    min_angle, index = abs(angle), i
             return lines[i]
 
     def find_obj(self, broken_scans):
@@ -514,30 +520,30 @@ class Lidar():
                     object_list.append(obj)
             l = len(object_list)
             if l == 0:
-                #no objects found
-                print("none")
+                # no objects found
+                print_verbose("none", debug_flag)
                 self.last_velocity = None
                 self.object_found = False
                 self.empty_scans += 1
                 if self.empty_scans > 5:
-                    print("no objects")
-                    #stop car
+                    print_verbose("no objects", debug_flag)
+                    # stop car
                     return None
             elif l == 1:
-                print("only one")
+                print_verbose("only one", debug_flag)
                 self.object_found = True
                 self.empty_scans = 0
                 self.last_obj = object_list[0]
                 return object_list[0]
             else:
-                print("multiple")
+                print_verbose("multiple", debug_flag)
                 self.object_found = True
                 max_likeness = 0
                 max_index = 0
                 self.empty_scans = 0
                 for index, obj in enumerate(object_list):
                     likeness = obj.find_likeness()
-                    print("likeness: ", likeness)
+                    print_verbose(f"likeness: {likeness}")
                     if likeness > max_likeness:
                         max_likeness = likeness
 
@@ -553,7 +559,7 @@ class Lidar():
             lc = self.last_obj.last_midpoint
             tt = self.last_obj.this_time
             lt = self.last_obj.last_time
-            """do velocity stuff"""
+            # do velocity stuff
             if lc:
                 vel = self.update_velocity(self.last_obj)
 
@@ -566,25 +572,25 @@ class Lidar():
             l = len(object_list)
             if l == 0:
                 # no objects found
-                print("none")
+                print_verbose("none", debug_flag)
                 self.last_velocity = None
                 self.object_found = False
                 self.empty_scans += 1
             elif l == 1:
-                print("only one")
+                print_verbose("only one", debug_flag)
                 self.object_found = True
                 self.empty_scans = 0
                 self.last_obj = object_list[0]
                 return object_list[0]
             else:
-                print("multiple")
+                print_verbose("multiple", debug_flag)
                 self.object_found = True
                 max_likeness = 0
                 max_index = 0
                 self.empty_scans = 0
                 for index, obj in enumerate(object_list):
                     likeness = obj.find_likeness()
-                    print("likeness: ", likeness)
+                    print_verbose(f"likeness: {likeness}", debug_flag)
                     if likeness > max_likeness:
                         max_likeness = likeness
                         max_index = index

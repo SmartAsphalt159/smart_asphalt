@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 
 import Jetson.GPIO as GPIO
-import time
 from math import pi
 
-#NOTE: channel indicates GPIO port
+# NOTE: channel indicates GPIO port
+
 
 class GPIO_Interaction():
     def __init__(self, enc_ch, servo_ch, motor_ch):
@@ -13,7 +13,7 @@ class GPIO_Interaction():
         self.motor_ch = motor_ch
         GPIO.setmode(GPIO.BOARD)
         GPIO.setwarnings(False)
-        GPIO.setup((self.servo_ch, self.motor_ch),GPIO.OUT)
+        GPIO.setup((self.servo_ch, self.motor_ch), GPIO.OUT)
         self.servo_pwm = GPIO.PWM(self.servo_ch, 50)
         self.motor_pwm = GPIO.PWM(self.motor_ch, 50)
         self.servo_pwm.start(self.servo_format(0))
@@ -24,7 +24,7 @@ class GPIO_Interaction():
         self.motor_pwm.stop()
         GPIO.cleanup()
 
-    def servo_format(self, val): #-10 => 9/R 10=>5.5/L
+    def servo_format(self, val): # -10 => 9/R 10=>5.5/L
         if val < -10:
             return 9
         elif val > 10:
@@ -32,8 +32,8 @@ class GPIO_Interaction():
         else:
             return val*3/20 + 7.5
 
-    def motor_format(self, val): #-10 => 8.5 10=>6
-        offset = 0.781#0.781
+    def motor_format(self, val): # -10 => 8.5 10=>6
+        offset = 0.781# 0.781
         val = val+offset
         if val < -10:
             return 9
@@ -42,10 +42,10 @@ class GPIO_Interaction():
         else:
             return val*3/20 + 7.5
 
-    def set_servo_pwm(self, value):     #-10->10
+    def set_servo_pwm(self, value):     # -10->10
         self.servo_pwm.ChangeDutyCycle(self.servo_format(float(value)))
 
-    def set_motor_pwm(self, value):     #-10->10
+    def set_motor_pwm(self, value):     # -10->10
         self.motor_pwm.ChangeDutyCycle(self.motor_format(float(value)))
 
 
@@ -72,7 +72,7 @@ class Encoder:
     def get_speed(self):
         total_t = 0
         d = 0
-        #print("len of speed array: ", len(self.speed_array))
+        # print("len of speed array: ", len(self.speed_array))
         if len(self.speed_array) is 0:
             if self.last_speed == 0:
                 return 0
