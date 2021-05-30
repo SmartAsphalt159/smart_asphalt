@@ -5,7 +5,6 @@ Last revision: Feb 17th, 2021
 """
 
 import threading
-import timing
 import time
 import serial
 import json
@@ -13,7 +12,7 @@ import network as net
 from queue import Queue
 from threading import Lock
 from network import recv_network, send_network
-from logger import Sys_logger, Data_logger
+# from logger import Sys_logger, Data_logger
 from Packet import Packet
 from sensor import Encoder, GPIO_Interaction
 from lidar import Lidar

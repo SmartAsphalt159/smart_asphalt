@@ -4,7 +4,7 @@ from math import sqrt, cos, sin, pi, floor, tan, atan
 from rplidar import RPLidar
 from debug_tools import print_verbose
 import numpy as np
-from logger import Data_logger
+# from logger import Data_logger
 
 # Set to False to stop printing
 debug_flag = True

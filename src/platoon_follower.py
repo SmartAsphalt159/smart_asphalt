@@ -9,7 +9,7 @@ import sys
 import network
 from sensor import GPIO_Interaction
 from queue import Queue
-from logger import Sys_logger
+# from logger import Sys_logger
 from synch import (network_producer, encoder_producer, encoder_consumer, lidar_producer, lidar_consumer)
 from controls import *
 from lidar import Lidar
