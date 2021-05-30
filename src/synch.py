@@ -17,6 +17,7 @@ from logger import Sys_logger, Data_logger
 from Packet import Packet
 from sensor import Encoder, GPIO_Interaction
 from lidar import Lidar
+from debug_tools import print_verbose
 
 
 class queue_skeleton(threading.Thread):
@@ -61,6 +62,9 @@ class queue_skeleton(threading.Thread):
 
 
 class network_producer(queue_skeleton, recv_network):
+    
+    # Disable Flag to stop print statements	
+    _network_debug = False
 
     def __init__(self, out_que, port, logger, timeout):
         """
@@ -86,7 +90,7 @@ class network_producer(queue_skeleton, recv_network):
                 packet, _ = self.listen_data(0.001)
                 if packet == -1:
                     # self.logger.log_error("Socket timeout occured")
-                    print("Socket timeout occured")
+                    print_verbose("Network Producer: No packet received", _network_debug)
                 else:
                     self.packet = packet
             except:
