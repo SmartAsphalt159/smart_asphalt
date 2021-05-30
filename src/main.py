@@ -70,13 +70,6 @@ def main():
     #lid_thread_timeout = 5
 
     #CONTROL VARS
-<<<<<<< HEAD
-    #Velocity constants PI controllers are often used rather than PD controllers for this
-    vp = 0.7
-    vi = 0
-    vd = 2
-    vk = 1
-=======
     
     #Velocity constants
     vp = conf.get_param("float", "velocity", "p-term")
@@ -84,7 +77,6 @@ def main():
     vd = conf.get_param("float", "velocity", "d-term")
     vk = conf.get_param("float", "velocity", "k-term")
     
->>>>>>> 26db94fd9596351ce327461e8fe230ffdc176cf2
     #Steering constants
     sp = conf.get_param("float", "steering", "p-term")
     si = conf.get_param("float", "steering", "i-term")
