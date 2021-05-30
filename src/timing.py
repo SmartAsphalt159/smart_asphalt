@@ -8,19 +8,23 @@ Last revision: December 22nd, 2020
 
 import time
 
-""" returns the curernt time in epoch """
+
 def get_current_time():
+    """ returns the curernt time in epoch """
     return time.time()
 
-""" sleep for a certain amount of time """
+
 def sleep_for(secs):
+    """ sleep for a certain amount of time """
     time.sleep(secs)
 
-""" converts timestamp to local time """
+
 def conv_timestamp(ts):
+    """ converts timestamp to local time """
     return time.gmtime(ts)
 
-""" Calculates difference between two timestamps """
+
 def meas_diff(ti, tf):
+    """ Calculates difference between two timestamps """
     return tf - ti
 

@@ -1,8 +1,8 @@
 import time
 import numpy as np
 from carphysics import Car
-
 # TODO: Utilization Conventions https://namingconvention.org/python/
+
 
 class NoObject(Exception):
     pass
@@ -138,7 +138,7 @@ class Controls(object):
         return distance
 
     def get_encoder_velocity(self):
-        """ Gets the velocity of the encoder in millimeters per second """
+        """ Gets the velocity of the encoder in meters per second """
         encoder_velocity = self.encoder_consumer.get_speed()
         return encoder_velocity
 

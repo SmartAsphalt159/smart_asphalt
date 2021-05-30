@@ -2,6 +2,10 @@
 from debug_tools import print_verbose
 from timing import *
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 26db94fd9596351ce327461e8fe230ffdc176cf2
 class PathPlanner:
     """
         Responsible for executing a path that is predefined by the user. Currently just uses time
@@ -72,7 +76,11 @@ class PathPlanner:
             return True
         return False
 
+<<<<<<< HEAD
 
+=======
+# Meant for testing PathPlanner class
+>>>>>>> 26db94fd9596351ce327461e8fe230ffdc176cf2
 # if __name__ == "__main__":
 #     path1 = [(45, 1, 1), (22, 1, 2), (33, 1, 3)]
 #     pp = PathPlanner(path1)

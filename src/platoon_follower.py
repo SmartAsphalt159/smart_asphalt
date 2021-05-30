@@ -14,7 +14,6 @@ from synch import (network_producer, encoder_producer, encoder_consumer, lidar_p
 from controls import *
 from lidar import Lidar
 from carphysics import CarPhysics
-from Packet import *
 from timing import get_current_time, sleep_for
 
 def main():
@@ -29,8 +28,9 @@ def main():
         c_type = sys.argv[1]  # TODO Verify its a valid command
 
     # INIT LOGGER
-    log = Sys_logger("Application")
 
+    # log = Sys_logger("Application")
+    log=None
     # INIT QUEUES (not length cap)
     network_q = Queue(0)
     encoder_q = Queue(0)
@@ -224,7 +224,7 @@ def main():
 
 def graceful_shutdown(log, gpio):
     gpio.shut_down()
-    log.log_info("Shutting down gracefully")
+    # log.log_info("Shutting down gracefully")
 
 
 if __name__ == "__main__":
