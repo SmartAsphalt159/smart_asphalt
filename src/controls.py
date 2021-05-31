@@ -537,6 +537,7 @@ class LidarNetworkControls(Controls):
             print("getting lidar data")
             try:
                 self.get_lidar_data()
+                print("Got Lidar Data")
             except KeyboardInterrupt as e:
                 raise e
             print("lidar gotten")

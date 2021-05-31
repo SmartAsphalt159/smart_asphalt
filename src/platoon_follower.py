@@ -15,6 +15,7 @@ from controls import *
 from lidar import Lidar
 from carphysics import CarPhysics
 from timing import get_current_time, sleep_for
+from debug_tools import print_verbose
 
 def main():
     # Dumb, smart, and lidar
@@ -28,7 +29,7 @@ def main():
         c_type = sys.argv[1]  # TODO Verify its a valid command
 
     # INIT LOGGER
-
+    _debug_follower = True
     # log = Sys_logger("Application")
     log=None
     # INIT QUEUES (not length cap)
@@ -161,16 +162,18 @@ def main():
                 # print(f"Speed = {encoder_speed}")
                 time.sleep_for(0.01)
         elif c_type == "smart-follower":
-            msg = "Smart network selected (smart-follower), beginning control loop"
+            msg = "Smart network selected (smart-follower), beginning Initialization of components"
             print(msg)
             # log.log_info("Smart network selected (smart-follower), beginning control loop")
 
             new_lidar = Lidar(False)
             sleep_for(0.1)
             carphys = CarPhysics()
-
+            print_verbose("Lidar Initialized", _debug_follower)
             try:
+                print_verbose("Lidar Control System Starting", _debug_follower)
                 controller = LidarNetworkControls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp, net_producer)
+                print_verbose("Lidar Control System Finished", _debug_follower)
             except KeyboardInterrupt as e:
                 print("Keyboard Interrupt Detected, Quitting!")
                 raise e

@@ -343,14 +343,14 @@ class Lidar:
                 now = time()
                 dt = now-then
                 print_verbose(f"since last scan: {dt}", debug_flag)
-                print_verbose(f"Time to write: {time()-now}", debug_flag)
+                # print_verbose(f"Time to write: {time()-now}", debug_flag)
                 # print("since start: ", now-start_:ime)
                 now=time()
                 then = now
                 start_time = now
                 # print("Measurements: ",c)
                 c = 0
-                # print("Full scan completed")
+                print("Full scan completed")
                 scan = []
                 # print(f"time to run {time()-start_of_loop}")
                 # print(f"Ending angle {angle}\n")
@@ -368,9 +368,9 @@ class Lidar:
                     # print(f"appended angle: {angle}")
                 # else:
                     # print(f"filtered angle: {angle}")
-            else:
-                print(f"q: {quality} d: {distance}")
-            print(f"quality and angle check {time()-t}")
+            #else:
+                #print(f"q: {quality} d: {distance}")
+            #print(f"quality and angle check {time()-t}")
             t = time()
             last = angle
 
