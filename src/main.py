@@ -96,7 +96,7 @@ def main():
     #ec = encoder_consumer(encoder_q, None, log, enc_thread_timeout)
 
     #Lidar (pull controls updates)
-    lp = lidar_producer(lidar_q, lidar_channel, log, lid_timeout)
+    lp = lidar_producer(lidar_q, lidar_channel, log, lidar_timeout)
     #lc = lidar_consumer(lidar_q, None, log, lid_thread_timeout)
 
 

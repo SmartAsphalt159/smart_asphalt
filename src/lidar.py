@@ -364,7 +364,9 @@ class Lidar:
                 if angle < 90 or angle > 270:
                     scan.append((angle, distance,quality))
                     # quality is placeholder for intensity later on
-                    # self.datalogger.update_df([time(), angle, distance, quality]) 
+                    # self.datalogger.update_df([time(), angle, distance, quality])
+                    #msg = f"{time()}, {angle}, {distance}, {quality}" 
+                    #print_verbose(msg, debug_flag)
                     # print(f"appended angle: {angle}")
                 # else:
                     # print(f"filtered angle: {angle}")
@@ -543,7 +545,7 @@ class Lidar:
                 self.empty_scans = 0
                 for index, obj in enumerate(object_list):
                     likeness = obj.find_likeness()
-                    print_verbose(f"likeness: {likeness}")
+                    print_verbose(f"likeness: {likeness}", debug_flag)
                     if likeness > max_likeness:
                         max_likeness = likeness
 

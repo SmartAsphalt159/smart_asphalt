@@ -6,7 +6,9 @@ Last revision: May 9th, 2021
 """
 
 import sys
+import threading
 import network
+import time
 from sensor import GPIO_Interaction
 from queue import Queue
 # from logger import Sys_logger
@@ -85,14 +87,14 @@ def main():
 
     # Lidar (pull controls updates)
     lp = lidar_producer(lidar_q, lidar_channel, log, lid_timeout)
-    lc = lidar_consumer(lidar_q, None, log, lid_thread_timeout)
+    #lc = lidar_consumer(lidar_q, None, log, lid_thread_timeout)
 
     # start the producer consumer threads
     net_producer.start()
     ep.start()
     encoder_consumer_data.start()
     lp.start()
-    lc.start()
+    #lc.start()
 
     try:
         # update local objects (done by threads)
@@ -211,14 +213,14 @@ def main():
         # log.log_error(err)
     # exited from loop
 
-    # lp.end_scan = True
+    lp.end_scan = True
     sleep_for(0.2)
     # halt other threads, they should exit naturally
     net_producer.halt_thread()
     # nc.halt_thread()
     ep.halt_thread()
     # ec.halt_thread()
-    # lp.halt_thread()
+    lp.halt_thread()
     # lc.halt_thread()
 
     # gracefully exit program and reset vars
