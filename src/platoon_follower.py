@@ -2,13 +2,11 @@
 
 """
 Follower Vehicle Script to enable follower specific behavior and fit the sensor characteristics of the follower,
-Last revision: May 9th, 2021
+Last revision: June 6th, 2021
 """
 
 import sys
-import threading
 import network
-import time
 from sensor import GPIO_Interaction
 from queue import Queue
 # from logger import Sys_logger
@@ -19,10 +17,13 @@ from carphysics import CarPhysics
 from timing import get_current_time, sleep_for
 from debug_tools import print_verbose
 
+
 def main():
-    # Dumb, smart, and lidar
-    # add arugments
-    if (len(sys.argv) != 2):
+    """
+    Will require the user to input a mode at the end of the cli of dumb, smart-follower, or lidar.
+    :return: None
+    """
+    if len(sys.argv) != 2:
         print("Command is \"python3 platoon_follower.py <type>\"")
         print("Optional types: dumb, smart-follower, lidar")
         exit(0)
@@ -33,17 +34,17 @@ def main():
     # INIT LOGGER
     _debug_follower = True
     # log = Sys_logger("Application")
-    log=None
+    log = None
     # INIT QUEUES (not length cap)
     network_q = Queue(0)
     encoder_q = Queue(0)
     lidar_q = Queue(0)
 
     # NETWORKING VARS
-    recvport = 2 # TODO: Are these correct
+    recvport = 2
     sendport = 1
-    timeout = 2  # seconds TODO maybe change to be smaller
-    net_thread_timeout = 5
+    timeout = 2  # in seconds
+    # net_thread_timeout = 5
 
     # Initializing the send_network
     sn = network.send_network(sendport)  # TODO: why is sn not being used
@@ -55,13 +56,13 @@ def main():
     # ENCODER VARS
     enc_channel = 19
     enc_timeout = 2
-    sample_wait = 0.1  # TODO utilize interrupts not polling
+    sample_wait = 0.1  # units in seconds
     enc_thread_timeout = 5
 
     # LIDAR VARS
     lidar_channel = "/dev/ttyUSB0"
     lid_timeout = 10  # TODO: Confirm Units
-    lid_thread_timeout = 5
+    # lid_thread_timeout = 5
 
     # CONTROL VARS
     # Velocity constants PI controllers are often used rather than PD controllers for this
@@ -83,18 +84,18 @@ def main():
 
     # Encoder
     ep = encoder_producer(encoder_q, enc_channel, log, enc_timeout, sample_wait)
-    encoder_consumer_data = encoder_consumer(encoder_q, None, log, enc_thread_timeout)
+    # encoder_consumer_data = encoder_consumer(encoder_q, None, log, enc_thread_timeout)
 
     # Lidar (pull controls updates)
     lp = lidar_producer(lidar_q, lidar_channel, log, lid_timeout)
-    #lc = lidar_consumer(lidar_q, None, log, lid_thread_timeout)
+    # lc = lidar_consumer(lidar_q, None, log, lid_thread_timeout)
 
     # start the producer consumer threads
     net_producer.start()
     ep.start()
-    encoder_consumer_data.start()
+    # encoder_consumer_data.start()
     lp.start()
-    #lc.start()
+    # lc.start()
 
     try:
         # update local objects (done by threads)
@@ -102,17 +103,16 @@ def main():
         # Call control system
         # TODO: Update to a better design pattern, this is pretty rough
         if (c_type == "dumb"):
-            # call dumb contorl system
+            # call dumb control system
             new_lidar = Lidar(False)
 
             carphys = CarPhysics()
 
+            # controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, net_producer, ep, lp, mode=1)
+
             controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, net_producer, ep, lp, mode=1)
 
-            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, net_producer, encoder_consumer_data, lp, mode=1)
-
             while True:
-                # TODO: double check
                 encoder_speed = controller.get_encoder_velocity()
                 print(f"encoder_speed: {encoder_speed}")
                 packet = net_producer.get_packet()
@@ -125,7 +125,7 @@ def main():
                 strg, accl = controller.control_loop(encoder_speed)
 
                 # Broadcast after control system
-                # sn.broadcast_data(accl, strg, encoder_speed, time.time())
+                sn.broadcast_data(accl, strg, encoder_speed, time.time())
 
         # Uncomment when written
         # TODO: when smart networking is implemented
@@ -155,26 +155,26 @@ def main():
                 # Broadcast after control system
                 print("Steering ", strg, "Accl ", accl)
                 # sn.broadcast_data(accl, strg, encoder_speed, time.time) #TODO: idk if we need this here
-        elif (c_type == "encoder_test"):
+        elif c_type == "encoder_test":
             new_lidar = Lidar(False)
             carphys = CarPhysics()
             controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, net_producer, ep, lp, mode=1)
             while True:
                 encoder_speed = controller.get_encoder_velocity()
-                # print(f"Speed = {encoder_speed}")
-                time.sleep_for(0.01)
+                print(f"Speed = {encoder_speed}")
+                sleep_for(0.01)
         elif c_type == "smart-follower":
-            msg = "Smart network selected (smart-follower), beginning Initialization of components"
-            print(msg)
+            msg = "Smart network selected (smart-follower), beginning initialization of components"
+            print_verbose(msg, _debug_follower)
             # log.log_info("Smart network selected (smart-follower), beginning control loop")
-
             new_lidar = Lidar(False)
             sleep_for(0.1)
             carphys = CarPhysics()
             print_verbose("Lidar Initialized", _debug_follower)
             try:
                 print_verbose("Lidar Control System Starting", _debug_follower)
-                controller = LidarNetworkControls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys, ep, lp, net_producer)
+                controller = LidarNetworkControls(vp, vi, vd, vk, sp, si, sd, new_lidar, gpio, carphys,
+                                                  ep, lp, net_producer)
                 print_verbose("Lidar Control System Finished", _debug_follower)
             except KeyboardInterrupt as e:
                 print("Keyboard Interrupt Detected, Quitting!")
@@ -190,9 +190,16 @@ def main():
             # log.log_info("Smart-Network Initialization Complete, Beginning Control Loop")
             print(msg)
             while True:
-                # Acquiring sensor data
+                # Sensor Data Acquisition
                 controller.get_lidar_data()
-                vehicle_velocity = controller.get_encoder_velocity()  # (m/s)
+                measured_speed = controller.get_encoder_velocity()  # units (m/s)
+                if measured_speed is None:
+                    msg = f"Platoon_Leader: measured_speed is {measured_speed}, " \
+                          f"there may be an issue with the encoder_consumer"
+                    print_verbose(msg, _debug_follower)
+                    raise ValueError(msg)
+
+                # Control Loop
                 strg, accl = controller.control_loop(vehicle_velocity)
                 log_data = f"strg: {strg} accel: {accl} velocity: {vehicle_velocity}mps"
                 # log.log_info(log_data)

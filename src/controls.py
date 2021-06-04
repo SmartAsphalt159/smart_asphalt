@@ -508,7 +508,8 @@ class LidarNetworkControls(Controls):
 
     def __init__(self, vp, vi, vd, vk, sp, si, sd, lidar, gpio, carphys, encoder_consumer, lidar_consumer,
                  network_producer, ref=0):
-        super(LidarNetworkControls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer, network_producer)
+        super(LidarNetworkControls, self).__init__(lidar, gpio, carphys, encoder_consumer,
+                                                   lidar_consumer, network_producer)
         self.velocity_P = vp
         self.velocity_I = vi
         self.velocity_D = vd
@@ -563,6 +564,7 @@ class LidarNetworkControls(Controls):
 
     def get_errors(self, speed, d_ref):
         packet = self.network_producer.get_packet()
+        if packet == -1:
         leader_speed = packet.speed
         leader_steering = packet.steering
         leader_throttle = packet.throttle
@@ -610,8 +612,8 @@ class LidarNetworkControls(Controls):
         modifier = I
         sum = 0
         """change taking from wrong side"""
-        for x,(pid,t) in enumerate(pid_list[:-1]):    #reiman sum of distance between vehicles
-            sum += pid * (t - pid_list[x+1][1])   #calculate deltat * pid val
+        for x,(pid,t) in enumerate(pid_list[:-1]):    # reiman sum of distance between vehicles
+            sum += pid * (t - pid_list[x+1][1])   # calculate delta_time * pid val
 
         i_val = sum * modifier
         print(f"i = {i_val}")

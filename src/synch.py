@@ -89,7 +89,7 @@ class network_producer(queue_skeleton, recv_network):
                 packet, _ = self.listen_data(0.001)
                 if packet == -1:
                     # self.logger.log_error("Socket timeout occured")
-                    print_verbose("Network Producer: No packet received", _network_debug)
+                    print_verbose("Network Producer: No packet received", True)
                 else:
                     self.packet = packet
             except:

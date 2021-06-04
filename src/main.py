@@ -20,7 +20,6 @@ from carphysics import CarPhysics
 from config import config
 
 
-
 def main():
 
     # Input Handling Begin
