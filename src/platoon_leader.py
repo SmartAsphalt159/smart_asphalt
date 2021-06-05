@@ -86,7 +86,7 @@ def main():
 
     # Encoder
     ep = encoder_producer(encoder_q, enc_channel, log, enc_timeout, sample_wait)
-    encoder_consumer_data = encoder_consumer(encoder_q, None, log, enc_thread_timeout)
+    # encoder_consumer_data = encoder_consumer(encoder_q, None, log, enc_thread_timeout)
 
     # Lidar (pull controls updates)
     # lp = lidar_producer(lidar_q, lidar_channel, log, lid_timeout)
@@ -113,7 +113,7 @@ def main():
 
             controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, net_producer, ep, lp, mode=1)
 
-            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, encoder_consumer_data, lp, mode=1)
+            controller = Dumb_Networking_Controls(new_lidar, gpio, carphys, nc, ep, lp, mode=1)
 
             while True:
                 # TODO: double check
@@ -172,12 +172,12 @@ def main():
             network_debugging_flag = True
             is_simulation = False
             carphys = CarPhysics()
-            network_controller = NetworkAdaptiveCruiseController(gpio, carphys, encoder_consumer_data, is_simulation)
-            default_path = [(20, 0, 20), (0, 0, 20), (25, 0, 20)]
+            network_controller = NetworkAdaptiveCruiseController(gpio, carphys, ep, is_simulation)
+            default_path = [(20, 0, 60), (0, 0, 20), (25, 0, 60)]
             path_plan = PathPlanner(default_path)
             # Define PID Terms
             network_controller.set_proportional_value(1)
-            network_controller.set_integral_value(0)
+            network_controller.set_integral_value(0.1)
             network_controller.set_derivative_value(0)
             network_controller.cruise_control_init_set_point()
 
@@ -187,22 +187,22 @@ def main():
 
             while True:
                 # Sensor Acquisition
-                measured_speed = encoder_consumer_data.get_speed()
+                measured_speed = ep.get_speed()
                 if measured_speed is None:
                     msg = f"Platoon_Leader: measured_speed is {measured_speed}, " \
-                          f"there may be an issue with the encoder_consumer"
+                          f"there may be an issue with the ep"
                     print_verbose(msg, network_debugging_flag)
                     raise ValueError(msg)
 
                 # Acquire Desired Vehicle State, meant for logging
-                desired_vel, desired_steer_pwm, time = path_plan.get_next_command()
+                desired_vel, desired_steer_pwm, time = 5, 0, 0# path_plan.get_next_command()
                 desired_velocity = desired_vel  # meters per second
                 desired_steering = desired_steer_pwm  # Currently is servo position not heading
 
                 # Control Loop
                 network_controller.set_desired_velocity(desired_velocity)
                 network_controller.control_loop()
-                gpio.set_servo_pwm(desired_steering)
+                # gpio.set_servo_pwm(desired_steering)
 
                 # Updating State Variables
                 timestamp = get_current_time()
@@ -211,7 +211,7 @@ def main():
                 sn.broadcast_data(throttle, steering, measured_speed, timestamp)
 
                 # Logging Telemetry Data
-                log_data = f"velocity: {measured_speed}mps, desired_velocity: {desired_velocity}mps," \
+                log_data = f"time: {timestamp}, velocity: {measured_speed}mps, desired_velocity: {desired_velocity}mps," \
                            f" desired_steering: {desired_steering} pwm signal"
                 # log.log_info(log_data)
                 print_verbose(log_data, network_debugging_flag)

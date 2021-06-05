@@ -431,7 +431,7 @@ class NetworkAdaptiveCruiseController:
 
         self.previous_velocity_error = velocity_error
         pi_out = proportional_expression + integral_expression + derivative_expression
-        # print("P=", proportional_expression, " I=", integral_expression, " D=", derivative_expression)
+        print("P=", proportional_expression, " I=", integral_expression, " D=", derivative_expression, "pid_out=", pi_out)
 
         return pi_out
 
@@ -449,6 +449,7 @@ class NetworkAdaptiveCruiseController:
         pi_controller_output = self.cruise_control()
         adjusted_throttle = self.clamp(pi_controller_output)
         self.gpio.set_motor_pwm(adjusted_throttle)
+        print("Adjusted Throttle: ", adjusted_throttle)
         # Motor speed is between 0 - 10 where 0 is neutral and 10 is max throttle, we want to translate throttle
         # clamp
         # pi_controller clean_up
@@ -478,7 +479,8 @@ class NetworkAdaptiveCruiseController:
         :param desired_velocity: the set point to reach measured in meters per second (m/s)
         :return: None
         """
-        self.cruise_control_init_set_point()
+        if (self.desired_velocity - desired_velocity) == 0:
+            self.cruise_control_init_set_point()
         self.desired_velocity = desired_velocity
 
     def get_desired_velocity(self):
@@ -551,7 +553,7 @@ class LidarNetworkControls(Controls):
         print(f"v_error = {v_error} d_error = {d_error} s_error = {s_error}")
         velocity_pid_input = d_error * self.velocity_Kp + v_error
         velocity_pid_output = self.velocity_pid_controller(velocity_pid_input)
-        accel_cmd = self.convert_pid(velocity_pid_output, self.velocity_output_scaling, self.velocity_output_clamp) # TODO PID: output wtf is happening here
+        accel_cmd = self.convert_pid(velocity_pid_output, self.velocity_output_scaling, self.velocity_output_clamp)
         self.gpio.set_motor_pwm(accel_cmd)
 
         steering_pid_input = s_error
@@ -564,7 +566,7 @@ class LidarNetworkControls(Controls):
 
     def get_errors(self, speed, d_ref):
         packet = self.network_producer.get_packet()
-        if packet == -1:
+        # if packet == -1:
         leader_speed = packet.speed
         leader_steering = packet.steering
         leader_throttle = packet.throttle
