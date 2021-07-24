@@ -384,7 +384,7 @@ class NetworkAdaptiveCruiseController:
 
         # Network Controller Variables and Parameters for controls
         self.desired_velocity = None
-        self.measured_velocity = None
+        self.measured_velocity = 0
         self.desired_steering_angle = None  # TODO: is this a good name to use?
         self.transmission_delay_millisecs = 3  # TODO: utilize a ping command to get round trip avg time, negligable
         self.encoder_sampling_rate = 400  # units in milliseconds
