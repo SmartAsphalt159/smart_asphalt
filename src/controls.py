@@ -384,7 +384,7 @@ class NetworkAdaptiveCruiseController:
 
         # Network Controller Variables and Parameters for controls
         self.desired_velocity = None
-        self.measured_velocity = None
+        self.measured_velocity = 0
         self.desired_steering_angle = None  # TODO: is this a good name to use?
         self.transmission_delay_millisecs = 3  # TODO: utilize a ping command to get round trip avg time, negligable
         self.encoder_sampling_rate = 400  # units in milliseconds
@@ -442,7 +442,7 @@ class NetworkAdaptiveCruiseController:
         Reference: https://github.com/ivmech/ivPID
         :return: None
         """
-        self.gpio.set_servo_pwm(0)  # Set to 0 to keep wheels straight
+        # self.gpio.set_servo_pwm(0)  # Set to 0 to keep wheels straight
         if self.is_sim_car is False:
             self.measured_velocity = self.encoder_consumer.get_speed()
             print(self.measured_velocity)

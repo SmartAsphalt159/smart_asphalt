@@ -176,9 +176,9 @@ def main():
             default_path = [(20, 0, 60), (0, 0, 20), (25, 0, 60)]
             path_plan = PathPlanner(default_path)
             # Define PID Terms
-            network_controller.set_proportional_value(1)
+            network_controller.set_proportional_value(20)
             network_controller.set_integral_value(0.1)
-            network_controller.set_derivative_value(0)
+            network_controller.set_derivative_value(1)
             network_controller.cruise_control_init_set_point()
 
             # State Variable Initialization
