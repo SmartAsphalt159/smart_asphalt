@@ -2,6 +2,7 @@
 from debug_tools import print_verbose
 from timing import *
 
+
 class PathPlanner:
     """
         Responsible for executing a path that is predefined by the user. Currently just uses time

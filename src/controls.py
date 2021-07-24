@@ -261,7 +261,7 @@ class LidarControls(Controls):
         print(f"v_error = {v_error} d_error = {d_error} s_error = {s_error}")
         velocity_pid_input = d_error * self.velocity_Kp + v_error
         velocity_pid_output = self.velocity_pid_controller(velocity_pid_input)
-        accel_cmd = self.convert_pid(velocity_pid_output, self.velocity_output_scaling, self.velocity_output_clamp) # TODO PID: output wtf is happening here
+        accel_cmd = self.convert_pid(velocity_pid_output, self.velocity_output_scaling, self.velocity_output_clamp)
         self.gpio.set_motor_pwm(accel_cmd)
 
         steering_pid_input = s_error
@@ -442,7 +442,7 @@ class NetworkAdaptiveCruiseController:
         Reference: https://github.com/ivmech/ivPID
         :return: None
         """
-
+        self.gpio.set_servo_pwm(0)  # Set to 0 to keep wheels straight
         if self.is_sim_car is False:
             self.measured_velocity = self.encoder_consumer.get_speed()
             print(self.measured_velocity)
@@ -497,6 +497,12 @@ class NetworkAdaptiveCruiseController:
 
     def set_derivative_value(self, dval):
         self.derivative_constant = dval
+
+    def get_measured_velocity(self):
+        """
+        :return: In meters per second the velocity as a float
+        """
+        return self.measured_velocity
 
 
 class LidarNetworkControls(Controls):

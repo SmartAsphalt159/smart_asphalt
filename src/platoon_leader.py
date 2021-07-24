@@ -187,7 +187,7 @@ def main():
 
             while True:
                 # Sensor Acquisition
-                measured_speed = ep.get_speed()
+                measured_speed = network_controller.get_measured_velocity()
                 if measured_speed is None:
                     msg = f"Platoon_Leader: measured_speed is {measured_speed}, " \
                           f"there may be an issue with the ep"
@@ -195,14 +195,13 @@ def main():
                     raise ValueError(msg)
 
                 # Acquire Desired Vehicle State, meant for logging
-                desired_vel, desired_steer_pwm, time = 5, 0, 0# path_plan.get_next_command()
+                desired_vel, desired_steer_pwm, time = path_plan.get_next_command()
                 desired_velocity = desired_vel  # meters per second
                 desired_steering = desired_steer_pwm  # Currently is servo position not heading
 
                 # Control Loop
                 network_controller.set_desired_velocity(desired_velocity)
                 network_controller.control_loop()
-                # gpio.set_servo_pwm(desired_steering)
 
                 # Updating State Variables
                 timestamp = get_current_time()
