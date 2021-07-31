@@ -4,9 +4,15 @@ from math import sqrt, cos, sin, pi, floor, tan, atan
 from rplidar import RPLidar
 import numpy as np
 from logger import Data_logger
+""" Object object
 
+    An Object in this case is a grouping of points with seperated by two edges. 
+    The Object class has functions which give the ability to filter out objects 
+    which would not pass as another vehicle.
+"""
 class Object:
     def __init__(self, pixels, filter_len, last_time, threshold_size,rel_velocity, last_midpoint, box_len, sample, obj_found,err_fac=1):
+        
         self.pixels = pixels
         self.filter_len = filter_len
         self.last_time = last_time
@@ -62,14 +68,20 @@ class Object:
         else:
             return False
 
-    """pass this object through filter. Objects too large/small are cut"""
+    """pass this object through filter. Objects too large are cut"""
     def size_filter(self):
 
         if self.size[0] > self.threshold_size or self.size[1] > self.threshold_size:
             return False
         else:
             return True
-
+    """
+    Not used now: using velocity and last position, determines if 
+    the new position is in a reasonable position. i.e. if a vehicle
+    is in front of the lidar and it detects a second object to the 
+    right, it disregards the object far from the position of the vehicle 
+    in the last scan.
+    """
     def location_filter(self):
         if self.velocity:
             d_t = self.this_time - self.last_time
@@ -124,6 +136,10 @@ class Object:
             return 1000/l
         return likeness
 
+    """
+    Below functions are to return a list of lines with 2 points for each endpoint
+    using Split and Merge (SAM) line detection
+    """
     def find_line_points(self,threshold):   #refrenced from https://github.com/Robotics-kosta/AMR-Line-extraction-from-Lidar-sensor-with-Split-and-Merge-algorithm/blob/master/src/main.py
         points = np.transpose(np.array(self.pixels))
         lines = self.SAM(points,threshold)
@@ -154,6 +170,7 @@ class Object:
             return np.linalg.norm(p-pstart)
         return np.divide(np.abs(np.linalg.norm(np.cross(pend-pstart, pstart-p))), np.linalg.norm(pend-pstart))
 
+    """Find position of the center of the two points"""
     def find_line_data(self, p1, p2):
         center = (p2+p1)/2                  # center of line segment
         length = np.linalg.norm(p2-p1)      # length of line segment
@@ -161,12 +178,17 @@ class Object:
         angle = np.arctan(dp[1]/dp[0]) * 180/np.pi      # angle from x axis to normal of line
         return angle, center, length
 
+    """
+    Given list of points which represent endpoints of 
+    lines, break into endpoint pairs
+    """
     def find_line_lines(self, lines):
         line_list = []
         for index in range(1, lines.shape[0]):
             line_list.append(self.find_line_data(lines[index-1], lines[index]))
         return line_list
 
+    """Removes lines that are essentially the same"""
     def colinear(self, lines, threshold_angle):
         for i, line1 in enumerate(lines):
             for j, line2 in enumerate(lines):
@@ -181,6 +203,10 @@ class Object:
     def set_center(self, center):
         self.center = center
 
+    """
+    Deletes lines that have the same angle but whos normal lines are 180 
+    degrees away from each other
+    """
     def filtered_lines(self, lines):
         threshold = 5
         if len(lines) > 2:
@@ -220,7 +246,13 @@ class Object:
         else:
             return lines
 
+""" Lidar object
 
+    Consists of scanning and point processing methods.
+    If called by producer consumer, scanner = 1 and 
+    will start the lidar function.
+
+"""
 class Lidar():
     def __init__(self, scanner, USB_port='/dev/ttyUSB0'):
         if scanner:
@@ -242,19 +274,22 @@ class Lidar():
         self.datalogger = Data_logger("lidar")
         self.scan_count = 0
 
+    """Restarts lidar if in an overflow state""" 
     def restart(self):
         self.lidar.stop()
         self.lidar.connect()
         self.iterator = self.lidar.iter_measurments(500)
 
+    """Defunct: not in use"""
     def start_file(self):
         file_name = "timing_" + str(floor(time())) + ".txt" 
         print(file_name)
         self.f = open(file_name, 'w+')
 
+    """Defunct: not in use"""
     def write_to_file(self, timing):
         self.f.write(str(timing) + "\n")
-
+    """Defunct: not in use"""
     def close_file(self):
         self.f.close()
 
@@ -503,6 +538,10 @@ class Lidar():
                     min_angle,index = abs(angle), i
             return lines[i]
 
+    """
+    Loops through list of points from lidar scan and returns
+    a list of potential objects which are composed of a list of points 
+    """
     def find_obj(self, broken_scans):
         if not self.object_found:
             object_list = []
