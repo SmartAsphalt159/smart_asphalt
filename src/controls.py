@@ -541,6 +541,10 @@ class LidarNetworkControls(Controls):
         self.steering_output_scaling = 1/100
 
         self.last_steering = 0
+        
+        self.prev_leader_speed = 0
+        self.prev_leader_steering = 0
+        self.prev_leader_throttle = 0
 
         if ref == 0:
             print("getting lidar data")
@@ -572,10 +576,20 @@ class LidarNetworkControls(Controls):
 
     def get_errors(self, speed, d_ref):
         packet = self.network_producer.get_packet()
-        # if packet == -1:
-        leader_speed = packet.speed
-        leader_steering = packet.steering
-        leader_throttle = packet.throttle
+                
+        leader_speed = self.prev_leader_speed
+        leader_steering = self.prev_leader_steering
+        leader_throttle = self.prev_leader_throttle
+        
+        if packet != -1:
+            leader_speed = packet.speed
+            leader_steering = packet.steering
+            leader_throttle = packet.throttle
+        
+        self.prev_leader_speed = leader_speed
+        self.prev_leader_steering = leader_steering
+        self.prev_leader_throttle = leader_throttle
+
         v_error = self.find_velocity_error(target_velocity=leader_speed)
         d_error = self.find_distance_error(d_ref)
         s_error = self.find_steering_error(speed)

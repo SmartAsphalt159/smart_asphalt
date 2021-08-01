@@ -41,8 +41,8 @@ def main():
     lidar_q = Queue(0)
 
     # NETWORKING VARS
-    recvport = 2
-    sendport = 1
+    recvport = 1
+    sendport = 3
     timeout = 2  # in seconds
     # net_thread_timeout = 5
 
@@ -200,8 +200,8 @@ def main():
                     raise ValueError(msg)
 
                 # Control Loop
-                strg, accl = controller.control_loop(vehicle_velocity)
-                log_data = f"strg: {strg} accel: {accl} velocity: {vehicle_velocity}mps"
+                strg, accl = controller.control_loop(measured_speed)
+                log_data = f"strg: {strg} accel: {accl} velocity: {measured_speed}mps"
                 # log.log_info(log_data)
                 print(log_data)
                 # speed = encoder_consumer_data.get_speed()
