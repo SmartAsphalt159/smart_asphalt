@@ -188,7 +188,7 @@ def main():
             timestamp = get_current_time()  # the time when message is sent
             msg = "Smart-Network Initialization Complete, Beginning Control Loop"
             # log.log_info("Smart-Network Initialization Complete, Beginning Control Loop")
-            print(msg)
+            print_verbose(msg, _debug_follower)
             while True:
                 # Sensor Data Acquisition
                 controller.get_lidar_data()
