@@ -16,6 +16,7 @@ from lidar import Lidar
 from carphysics import CarPhysics
 from timing import get_current_time, sleep_for
 from debug_tools import print_verbose
+from watchdog import Watchdog
 
 
 def main():
@@ -67,7 +68,7 @@ def main():
     # CONTROL VARS
     # Velocity constants PI controllers are often used rather than PD controllers for this
     vp = 0.7
-    vi = 0
+    vi = 0.01
     vd = 2
     vk = 1
     # Steering constants
@@ -145,8 +146,9 @@ def main():
                 raise e
 
             while True:
+                print("crit section")  
                 controller.get_lidar_data()
-                print("got lidar")
+                print("got lidar exit crit section")
                 encoder_speed = controller.get_encoder_velocity()
                 # print(f"encoder_speed: {encoder_speed}")
                 then = time.time()
@@ -191,7 +193,9 @@ def main():
             print_verbose(msg, _debug_follower)
             while True:
                 # Sensor Data Acquisition
+                print("crit section")
                 controller.get_lidar_data()
+                
                 measured_speed = controller.get_encoder_velocity()  # units (m/s)
                 if measured_speed is None:
                     msg = f"Platoon_Leader: measured_speed is {measured_speed}, " \

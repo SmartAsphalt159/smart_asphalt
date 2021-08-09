@@ -4,7 +4,7 @@ from math import sqrt, cos, sin, pi, floor, tan, atan
 from rplidar import RPLidar
 from debug_tools import print_verbose
 import numpy as np
-from logger import Data_logger
+#from logger import Data_logger
 
 # Set to False to stop printing
 debug_flag = True
@@ -176,14 +176,23 @@ class Object:
         return line_list
 
     def colinear(self, lines, threshold_angle):
+        out_list = []
+        exclude_i_set = set()
+        exclude_j_set = set()
         for i, line1 in enumerate(lines):
             for j, line2 in enumerate(lines):
-                if i != j:
+                if i != j and not ((i in exclude_i_set) or (j in exclude_j_set)):
                     if abs(line1[0]-line2[0]) < threshold_angle:
                         if line1[2] > line2[2]:
-                            del lines[j]
+                            exclude_j_set.add(j)
                         else:
-                            del lines[i]
+                            exclude_i_set.add(i)
+        out_list = list(exclude_i_set.union(exclude_j_set))
+        out_list.sort(reverse=True)
+        #print("out_list_ len: ", len(out_list), " ", out_list)
+        #print("lines_list_ len: ", len(lines), " ", lines)
+        for index in out_list:
+            del lines[index]
         return lines
 
     def set_center(self, center):
@@ -247,7 +256,7 @@ class Lidar:
         self.scan_read = True
         self.end_scan = False
         self.running = True
-        self.datalogger = Data_logger("lidar")
+        #self.datalogger = Data_logger("lidar")
         self.scan_count = 0
 
     def restart(self):
@@ -286,11 +295,11 @@ class Lidar:
         end_of_loop = then
         t = then
         for new_scan, quality, angle, distance in self.iterator:
-            # print("\n")
+            #print("Level 1 Start of For loop")
             # increment the scan count for logging
             self.scan_count+=1
             if self.end_scan or not self.running:
-                print(self.end_scan)
+                #print(self.end_scan)
                 # self.close_file()
                 break
             # print(f"since last start: {time()-start_of_loop} angle: {angle}")
@@ -305,7 +314,8 @@ class Lidar:
                 # print("BAD QUALITY")
                 continue
             # print(f"quality check {time()-t}")
-
+            #print("level 1 ends here")
+            #print("level 2 starts")
             t = time()
             if last == -1:
                 if first:
@@ -333,7 +343,8 @@ class Lidar:
             count += 1
             # print(f"last check {time()-t}")
             t = time()
-
+            #print("level 2 ends")
+            #print("level 3 starts")
             if last < start and angle > start and count > 30:
                 self.new_scan = scan
                 self.scan_read = False
@@ -358,13 +369,14 @@ class Lidar:
                 end_of_loop = time()
                 continue
             # print(f"end scan check{time()-t}")
-
+            #print("level 3 ends")
+            #print("level 4 starts")
             t = time()
             if quality > 1 and distance > 1:
                 if angle < 90 or angle > 270:
                     scan.append((angle, distance))
                     # quality is placeholder for intensity later on
-                    # self.datalogger.update_df([time(), angle, distance, quality])
+                    # self.datalogger.update_df([time(), angle, distance, quality]) uncomment logging
                     #msg = f"{time()}, {angle}, {distance}, {quality}" 
                     #print_verbose(msg, debug_flag)
                     # print(f"appended angle: {angle}")
@@ -381,14 +393,16 @@ class Lidar:
             # print(f"time to run {time()-start_of_loop}")
             end_of_loop = time()
             t = time()
-
+            #print("level 4 ends")
+            #print("level 5 starts")
             # log data to file every 10 scans (can change number later)
             if (self.scan_count % 100 == 0):
-                self.datalogger.log_data()
+                #self.datalogger.log_data()
                 continue
             if self.end_scan or not self.running:
                 break
-
+            #print("End of Loop level 1")
+            #print("level 5 ends")
         print("End scan = ", self.end_scan)
 
     def get_scan_from_consumer(self):
@@ -430,7 +444,7 @@ class Lidar:
             polar[index] = (t_ang + 90 if t_ang + 90 < 360 else t_ang - 270, pt[1])
 
         polar.sort()
-        print(list(enumerate(polar)))
+        #print(list(enumerate(polar)))
         for index, (angle, distance) in enumerate(polar):
             if index == len(polar)-1:
                 if abs(distance-polar[0][1]) > threshold:  # make this loop around
@@ -488,7 +502,7 @@ class Lidar:
             print_verbose(f"Line: {line}", debug_flag)
             return obj, line
         else:
-            print_verbose("No object found :(", debug_flag)
+            print_verbose("Break_dc's No object found :(, none returned", debug_flag)
             return None
 
     def find_main_line(self, lines): # line: [angle center length]

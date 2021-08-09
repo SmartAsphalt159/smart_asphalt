@@ -1,6 +1,7 @@
 import time
 import numpy as np
 from carphysics import Car
+from watchdog import Watchdog
 # TODO: Utilization Conventions https://namingconvention.org/python/
 
 
@@ -18,6 +19,7 @@ class Controls(object):
         self.carphys = carphys
         self.line = None
         self.obj = None
+        self.valid_read = False
 
     def find_velocity_error(self, mode=0, target_velocity=0):   # mode 0: lidar // mode 1: encoders over networking
         if mode == 0:
@@ -98,39 +100,65 @@ class Controls(object):
         b[1] = a[0]
         return b
 
+    def wdhandler(self):
+        print("handler ---------------------------", self.valid_read)
+        self.valid_read = True
+        try:    
+            raise NoObject
+        except NoObject:
+            try:
+                time.sleep(0.08)
+                print("handler sleep")
+            except KeyboardInterrupt as e:
+                raise e
+        print("Time Exceeded ---------------------------")
+   
     def get_lidar_data(self):
-        valid_read = False
-        while not valid_read:
-            scan = self.lidar_consumer.get_scan()
-            if scan and not self.lidar_consumer.scan_read:
-                try:
-                    try:
-                        self.lidar_consumer.scan_read = True
-                        data = self.lidar.scan_break_objects_lines(scan)
-                        if not data:
-                            raise NoObject
-                        obj, line = data
-                        self.obj = obj
-                        self.line = line
-                        valid_read = True
-                    except NoObject:
-                        print("No object")
-                        try:
-                            time.sleep(0.08)
-                        except KeyboardInterrupt as e:
-                            raise e
-                    except KeyboardInterrupt as e:
-                        raise e
-                except KeyboardInterrupt as e:
-                    raise e
-                except Exception as e:
-                    print(e)
-                    raise ValueError("Get lidar data")
-            else:
-                try:
-                    time.sleep(0.01)
-                except KeyboardInterrupt as e:
-                    raise e
+        self.valid_read = False        
+
+        watch = Watchdog(2, self.wdhandler)
+        try:
+	        while not self.valid_read:
+	            #print("s0")
+	            scan = self.lidar_consumer.get_scan()
+	            #print("ssss0")
+	            #print("lidar_scan",self.lidar_consumer.scan_read)
+	            if scan != None and not self.lidar_consumer.scan_read:
+	                #print("end s0")
+	                try:
+	                    try:
+	                        #print("s1")
+	                        self.lidar_consumer.scan_read = True
+	                        data = self.lidar.scan_break_objects_lines(scan)
+	                        if data is None:
+	                            raise NoObject
+	                        obj, line = data
+	                        self.obj = obj
+	                        self.line = line
+	                        self.valid_read = True
+	                        print("end s1")
+	                    except NoObject:
+	                        print("get_lidar_: No object")
+	                        try:
+	                            time.sleep(0.08)
+	                            print("slept")
+	                        except KeyboardInterrupt as e:
+	                            raise e
+	                    except KeyboardInterrupt as e:
+	                        raise e
+	                except KeyboardInterrupt as e:
+	                    raise e
+	                except Exception as e:
+	                    print(e)
+	                    raise ValueError("Get lidar data")
+	            else:
+	                try:
+	                    time.sleep(0.01)
+	                except KeyboardInterrupt as e:
+	                    raise e
+        except Watchdog:
+            print("get_lidar_data: watchdog timer triggered, ", self.valid_read)            
+        watch.stop()
 
     def get_distance(self):
         position = self.lidar.get_position(self.obj)
@@ -230,8 +258,8 @@ class LidarControls(Controls):
         self.velocity_pid_length = 20
         self.velocity_pos_ref = 200  # millimeters (mm) reference position
 
-        self.velocity_output_clamp = (-1, 4)  # clamps output between these two values
-        self.velocity_output_scaling = 1/100
+        self.velocity_output_clamp = (0, 0.5)  # clamps output between these two values
+        self.velocity_output_scaling = 1/800
 
         self.steering_P = sp
         self.steering_I = si
@@ -264,7 +292,7 @@ class LidarControls(Controls):
         accel_cmd = self.convert_pid(velocity_pid_output, self.velocity_output_scaling, self.velocity_output_clamp)
         self.gpio.set_motor_pwm(accel_cmd)
 
-        steering_pid_input = s_ercror
+        steering_pid_input = s_error
         steering_pid_output = self.steering_pid_controller(steering_pid_input)
         steering_cmd = self.convert_pid(steering_pid_output, self.steering_output_scaling, self.steering_output_clamp)
         self.gpio.set_servo_pwm(steering_cmd)
@@ -338,13 +366,14 @@ class LidarControls(Controls):
     """convert value from PID controller to -10->10 value in sensor"""
     def convert_pid(self, pid_val, output_scaling, output_clamp):
         val = output_scaling*pid_val
-
-        if val > output_clamp[1]:
-            return output_clamp[1]
-        elif val < output_clamp[0]:
-            return output_clamp[0]
-        else:
-            return val
+        clamped_adjustment = max(min(output_clamp[1], val), output_clamp[0])
+        #if val > output_clamp[1]:
+        #    return output_clamp[1]
+        #elif val < output_clamp[0]:
+        #    return output_clamp[0]
+        #else:
+        #    return val
+        return clamped_adjustment
 
 
 class NetworkAdaptiveCruiseController:

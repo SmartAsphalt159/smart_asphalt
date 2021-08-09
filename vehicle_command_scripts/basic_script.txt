@@ -5,7 +5,7 @@
 # '#' Comment will ignore a line
 
 # Move Forward
-throttle 0.0006
+throttle 0.1
 wait 2
 throttle 0
 # Done

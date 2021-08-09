@@ -40,7 +40,7 @@ class GPIO_Interaction():
         elif val > 10:
             return 6
         else:
-            return val*3/20 + 7.5
+            return val*3/20 + 7.5 # Be Careful do not give execessive values may damage motors
 
     def set_servo_pwm(self, value):     # -10->10
         self.servo_pwm.ChangeDutyCycle(self.servo_format(float(value)))
