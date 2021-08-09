@@ -264,7 +264,7 @@ class LidarControls(Controls):
         accel_cmd = self.convert_pid(velocity_pid_output, self.velocity_output_scaling, self.velocity_output_clamp)
         self.gpio.set_motor_pwm(accel_cmd)
 
-        steering_pid_input = s_error
+        steering_pid_input = s_ercror
         steering_pid_output = self.steering_pid_controller(steering_pid_input)
         steering_cmd = self.convert_pid(steering_pid_output, self.steering_output_scaling, self.steering_output_clamp)
         self.gpio.set_servo_pwm(steering_cmd)
@@ -355,37 +355,37 @@ class NetworkAdaptiveCruiseController:
         "lead" vehicle beyond velocity and steering commands.
     """
 
-    def __init__(self, gpio=None, car_physics=None, encoder_consumer=None, is_sim_car=False):
+    def __init__(self, gpio=None, car_physics=None, encoder_producer=None, is_sim_car=False):
         """
         Initializes the NetworkAdaptiveCruiseController class as long as the parameters are not
         None.
 
         :param gpio:
         :param car_physics:
-        :param encoder_consumer:
+        :param encoder_producer:
         :param network_producer:
         """
         if (gpio is None): 
             raise ValueError("The gpio parameter in NetworkVelocityController was None!")
         if (car_physics is None):
             raise ValueError("The car_physics parameter in NetworkVelocityController was None!")
-        if (encoder_consumer is None):
-            raise ValueError("The encoder_consumer parameter in NetworkVelocityController was None!")
+        if (encoder_producer is None):
+            raise ValueError("The encoder_producer parameter in NetworkVelocityController was None!")
         # TODO: Verify network producer/consumer is what I want
         self.is_sim_car = is_sim_car
         if self.is_sim_car is True:
-            self.encoder_consumer = None
+            self.encoder_producer = None
         else:
-            self.encoder_consumer = encoder_consumer
+            self.encoder_producer = encoder_producer
 
         self.gpio = gpio
         self.car_physics = car_physics
         self.car = Car(0, 0.07)             # Mass is zero for now and 0.07 meters is diameter of tire
 
         # Network Controller Variables and Parameters for controls
-        self.desired_velocity = None
+        self.desired_velocity = 0
         self.measured_velocity = 0
-        self.desired_steering_angle = None  # TODO: is this a good name to use?
+        self.desired_steering_angle = 0  # TODO: is this a good name to use?
         self.transmission_delay_millisecs = 3  # TODO: utilize a ping command to get round trip avg time, negligable
         self.encoder_sampling_rate = 400  # units in milliseconds
         self.integral_delta_time = 1/self.encoder_sampling_rate  # at different intervals in case of changes.
@@ -393,7 +393,7 @@ class NetworkAdaptiveCruiseController:
         self.integral_constant = 0          # Modify I term as needed
         self.derivative_constant = 0        # Modify D term as needed
         self.accumulated_error = 0
-        self.pid_limit_max = 10  # Can be modified
+        self.pid_limit_max = 1   # Can be modified
         self.pid_limit_min = 0   # Can be modified
         self.previous_velocity_error = 0
         # self.steering_output_clamp = (-10, 10)  # clamps output between these two values
@@ -442,14 +442,18 @@ class NetworkAdaptiveCruiseController:
         Reference: https://github.com/ivmech/ivPID
         :return: None
         """
-        # self.gpio.set_servo_pwm(0)  # Set to 0 to keep wheels straight
+        
         if self.is_sim_car is False:
-            self.measured_velocity = self.encoder_consumer.get_speed()
-            print(self.measured_velocity)
+            self.measured_velocity = self.encoder_producer.get_speed()
+            print("Measured_Velocity: ------------", self.measured_velocity)
         pi_controller_output = self.cruise_control()
         adjusted_throttle = self.clamp(pi_controller_output)
         self.gpio.set_motor_pwm(adjusted_throttle)
         print("Adjusted Throttle: ", adjusted_throttle)
+        time.sleep(0.1)
+        self.gpio.set_servo_pwm(self.desired_steering_angle)  # Set to 0 to keep wheels straight
+        print("Adjusted steering: ", self.desired_steering_angle)
+         
         # Motor speed is between 0 - 10 where 0 is neutral and 10 is max throttle, we want to translate throttle
         # clamp
         # pi_controller clean_up
@@ -488,6 +492,12 @@ class NetworkAdaptiveCruiseController:
         :return: The desired velocity in m/s
         """
         return self.desired_velocity
+
+    def set_desired_steering_angle(self, angle):
+        self.desired_steering_angle = angle
+
+    def get_desired_steering_angle(self):
+        return self.desired_steering_angle
 
     def set_proportional_value(self, pval):
         self.proportional_constant = pval

@@ -173,7 +173,7 @@ def main():
             is_simulation = False
             carphys = CarPhysics()
             network_controller = NetworkAdaptiveCruiseController(gpio, carphys, ep, is_simulation)
-            default_path = [(20, 0, 60), (0, 0, 20), (25, 0, 60)]
+            default_path = [(5, 0, 10), (0, 7, 10), (5, -8, 10)]
             path_plan = PathPlanner(default_path)
             # Define PID Terms
             network_controller.set_proportional_value(20)
@@ -200,8 +200,12 @@ def main():
                 desired_steering = desired_steer_pwm  # Currently is servo position not heading
 
                 # Control Loop
+                #gpio.set_servo_pwm(desired_steering)
+                #sleep_for(0.01)
+                network_controller.set_desired_steering_angle(desired_steering)
                 network_controller.set_desired_velocity(desired_velocity)
                 network_controller.control_loop()
+                #sleep_for(0.01)
 
                 # Updating State Variables
                 timestamp = get_current_time()

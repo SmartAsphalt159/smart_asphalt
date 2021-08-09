@@ -61,30 +61,38 @@ class Encoder:
         self.speed_array = []
         self.acceleration_array = []
         self.speed_read = True
+        self.mutex = False
 
     def sample_speed(self, tally, delta_ms):
         self.tally = tally
         rps = self.tally/(self.mag_num*(delta_ms/1000))
         speed = 2*pi*rps*self.r  # meters per second (m/s)
+        self.mutex = True # Critical Section
         self.speed_array.append((speed, delta_ms/1000))
+        self.mutex = False
         self.speed_read = False
 
     def get_speed(self):
         total_t = 0
         d = 0
-        # print("len of speed array: ", len(self.speed_array))
-        if len(self.speed_array) is 0:
+        t = []        
+        if (self.mutex):
+            t = self.speed_array
+        
+        print("len of speed array: ", len(t))
+        if len(t) == 0:
             if self.last_speed == 0:
                 return 0
             else:
                 return self.last_speed
-
-        for speed, d_time in self.speed_array:
+        print("len of speed array: ", len(t))
+        for speed, d_time in t:
             total_t += d_time
             d += speed*d_time
 
         avg_speed = d/total_t
-        self.speed_array = []
+        if (self.mutex):
+            self.speed_array.clear()
         self.speed_read = True
         self.last_speed = avg_speed
         return avg_speed
