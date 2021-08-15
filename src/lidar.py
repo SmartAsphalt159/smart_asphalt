@@ -4,7 +4,7 @@ from math import sqrt, cos, sin, pi, floor, tan, atan
 from rplidar import RPLidar
 from debug_tools import print_verbose
 import numpy as np
-#from logger import Data_logger
+from logger import Data_logger
 
 # Set to False to stop printing
 debug_flag = True
@@ -256,7 +256,7 @@ class Lidar:
         self.scan_read = True
         self.end_scan = False
         self.running = True
-        #self.datalogger = Data_logger("lidar")
+        self.datalogger = Data_logger("lidar")
         self.scan_count = 0
 
     def restart(self):
@@ -376,7 +376,7 @@ class Lidar:
                 if angle < 90 or angle > 270:
                     scan.append((angle, distance))
                     # quality is placeholder for intensity later on
-                    # self.datalogger.update_df([time(), angle, distance, quality]) uncomment logging
+                    self.datalogger.update_df([time(), angle, distance, quality]) uncomment logging
                     #msg = f"{time()}, {angle}, {distance}, {quality}" 
                     #print_verbose(msg, debug_flag)
                     # print(f"appended angle: {angle}")
@@ -397,7 +397,7 @@ class Lidar:
             #print("level 5 starts")
             # log data to file every 10 scans (can change number later)
             if (self.scan_count % 100 == 0):
-                #self.datalogger.log_data()
+                self.datalogger.log_data()
                 continue
             if self.end_scan or not self.running:
                 break
