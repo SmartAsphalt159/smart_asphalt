@@ -93,6 +93,7 @@ class network_producer(queue_skeleton, recv_network):
                     self.packet = -1
                     
                 else:
+                    print_verbose("Network Producer: packet received", True)
                     self.packet = packet
             except:
                 if(self.check_full()):
