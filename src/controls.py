@@ -4,11 +4,17 @@ from carphysics import Car
 from watchdog import Watchdog
 # TODO: Utilization Conventions https://namingconvention.org/python/
 
-
+"""Exception raised when no object is found"""
 class NoObject(Exception):
     pass
 
-
+"""
+    Class which creates a Controls object. Main goal
+    is to use measurements to reduce distance and 
+    velocity error via a PID control loop. This class
+    specifically has utilities to calculate error in
+    different circumstances
+"""
 class Controls(object):
     def __init__(self, lidar, gpio, carphys, encoder_consumer, lidar_consumer, network_producer=None):
         self.lidar = lidar
@@ -174,7 +180,12 @@ class Controls(object):
         relative_lidar_velocity = self.obj.velocity
         return relative_lidar_velocity
 
-
+""" 
+    The mode of this operation relies solely on networking 
+    information from the leading car. It immediately carries 
+    the velocity commands but delays the steering by a factor 
+    of its velocity 
+"""
 class Dumb_Networking_Controls(Controls):
     def __init__(self, lidar, gpio, carphys, network_consumer, encoder_consumer, lidar_consumer, mode=0):
         super(Dumb_Networking_Controls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer)    #runs init of superclass
@@ -246,7 +257,7 @@ class LidarControls(Controls):
     If mode is chain find initial distance with lidar. Else pre set it manually
     In control loop do above
     """
-
+    
     def __init__(self, vp, vi, vd, vk, sp, si, sd, lidar, gpio, carphys, encoder_consumer, lidar_consumer, ref=0):
         super(LidarControls, self).__init__(lidar, gpio, carphys, encoder_consumer, lidar_consumer)    #runs init of superclass
         self.velocity_P = vp
