@@ -5,6 +5,7 @@ from rplidar import RPLidar
 from debug_tools import print_verbose
 import numpy as np
 from logger import Data_logger
+import threading
 """ Object object"""
 
 # Set to False to stop printing
@@ -409,7 +410,7 @@ class Lidar:
                 if angle < 90 or angle > 270:
                     scan.append((angle, distance))
                     # quality is placeholder for intensity later on
-                    self.datalogger.update_df([time(), angle, distance, quality]) uncomment logging
+                    self.datalogger.update_df([time(), angle, distance, quality])  # uncomment logging
                     #msg = f"{time()}, {angle}, {distance}, {quality}" 
                     #print_verbose(msg, debug_flag)
                     # print(f"appended angle: {angle}")
@@ -429,8 +430,9 @@ class Lidar:
             #print("level 4 ends")
             #print("level 5 starts")
             # log data to file every 10 scans (can change number later)
-            if (self.scan_count % 100 == 0):
-                self.datalogger.log_data()
+            if self.scan_count % 100 == 0:
+                thread_logging = threading.Thread(target=self.datalogger.log_data)
+                thread_logging.start()
                 continue
             if self.end_scan or not self.running:
                 break
