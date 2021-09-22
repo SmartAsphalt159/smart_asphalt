@@ -8,6 +8,7 @@ Last revision: April 15th, 2021
 import pandas as pd
 import numpy as np 
 import logging
+#import threading
 
 
 class Sys_logger():
@@ -41,6 +42,8 @@ class Sys_logger():
 
 
 class Data_logger:
+
+    #_dataframe_lock = threading.Lock()
 
     def __init__(self, sensor):
         """ data logger Constructor """
@@ -105,8 +108,12 @@ class Data_logger:
     """ update internal dataframe with the new row """
     def update_df(self, data):
         self.df = self.df.append(self.format_data(data), ignore_index=True)
+    
+    """ Update dataframe using dictionaries for better time utilization """
+    def update_df_dict(self, dict_list):
+        self.df = self.df.from_dict(dict_list)
 
     """ print out current data frame """
     def print_df(self):
         print(self.df.to_string())
-            
+

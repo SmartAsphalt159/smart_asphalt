@@ -9,7 +9,7 @@ import sys
 import network
 from sensor import GPIO_Interaction
 from queue import Queue
-# from logger import Sys_logger
+from logger import Sys_logger
 from synch import (network_producer, encoder_producer, encoder_consumer, lidar_producer, lidar_consumer)
 from controls import *
 from lidar import Lidar
@@ -34,8 +34,7 @@ def main():
 
     # INIT LOGGER
     _debug_follower = True
-    # log = Sys_logger("Application")
-    log = None
+    log = Sys_logger("Application")
     # INIT QUEUES (not length cap)
     network_q = Queue(0)
     encoder_q = Queue(0)
@@ -221,7 +220,7 @@ def main():
 
         err = "Exitted loop - Exception: " + str(e)
         raise ValueError(err)
-        # log.log_error(err)
+        log.log_error(err)
     # exited from loop
 
     lp.end_scan = True

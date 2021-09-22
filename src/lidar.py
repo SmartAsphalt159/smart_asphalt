@@ -287,6 +287,7 @@ class Lidar:
         self.scan_read = True
         self.end_scan = False
         self.running = True
+        self.to_log = True
         self.datalogger = Data_logger("lidar")
         self.scan_count = 0
 
@@ -328,6 +329,7 @@ class Lidar:
         start_of_loop = then
         end_of_loop = then
         t = then
+        lidar_raw_data_list = []
         for new_scan, quality, angle, distance in self.iterator:
             #print("Level 1 Start of For loop")
             # increment the scan count for logging
@@ -405,12 +407,16 @@ class Lidar:
             # print(f"end scan check{time()-t}")
             #print("level 3 ends")
             #print("level 4 starts")
-            t = time()
+            #t = time()
             if quality > 1 and distance > 1:
                 if angle < 90 or angle > 270:
                     scan.append((angle, distance))
                     # quality is placeholder for intensity later on
-                    self.datalogger.update_df([time(), angle, distance, quality])  # uncomment logging
+                    if self.to_log:
+                        current_time = time()
+                        lidar_raw_data_dict = {"Timestamp": current_time, "Angle": angle, "Distance": distance, "Intensity": quality}
+                        lidar_raw_data_list.append(lidar_raw_data_dict)                 
+                        #self.datalogger.update_df_dict(lidar_raw_data_dict)  # uncomment logging
                     #msg = f"{time()}, {angle}, {distance}, {quality}" 
                     #print_verbose(msg, debug_flag)
                     # print(f"appended angle: {angle}")
@@ -419,7 +425,7 @@ class Lidar:
             #else:
                 #print(f"q: {quality} d: {distance}")
             #print(f"quality and angle check {time()-t}")
-            t = time()
+            #t = time()
             last = angle
 
             # print(f"self.end_scan and angle last {time()-t}")
@@ -429,10 +435,19 @@ class Lidar:
             t = time()
             #print("level 4 ends")
             #print("level 5 starts")
+            if len(lidar_raw_data_list) > 49:    
+                print("RANNNNNNN---------------")
+                self.datalogger.update_df_dict(lidar_raw_data_list)     
+                #datalog_update_thread = threading.Thread(target=self.datalogger.update_df_dict, args=(lidar_raw_data_list, ))
+                #datalog_update_thread.start()   
+                lidar_raw_data_list = []
             # log data to file every 10 scans (can change number later)
-            if self.scan_count % 100 == 0:
-                thread_logging = threading.Thread(target=self.datalogger.log_data)
-                thread_logging.start()
+            if self.to_log and self.scan_count % 100 == 0:
+                #datalog_logging_thread = threading.Thread(target=self.datalogger.log_data)
+                #datalog_logging_thread.start()                
+                self.datalogger.log_data()
+                #thread_logging.start()
+                #thread_logging.join
                 continue
             if self.end_scan or not self.running:
                 break
